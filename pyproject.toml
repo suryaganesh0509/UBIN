@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ubin"
-version = "0.1.0"
+version = "0.2.0"
 description = "UBIN reference implementation: universal, lazy binary access for arbitrary files."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,7 +12,7 @@ license = "MIT"
 authors = [
   {name = "UBIN Project"}
 ]
-dependencies = []
+dependencies = ["cryptography>=42"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

@@ -20,3 +20,27 @@ class UbinClosed(UbinError):
 
 class UbinInvalidRange(UbinError):
     """Invalid offset/length/block-size request."""
+
+
+class UbinSecureError(UbinError):
+    """Base error for UBIN Secure."""
+
+
+class UbinInvalidHeader(UbinSecureError):
+    """Secure container header is invalid or unsupported."""
+
+
+class UbinAuthenticationError(UbinSecureError):
+    """Cryptographic authentication failed."""
+
+
+class UbinCorruptionError(UbinSecureError):
+    """Secure container is truncated, inconsistent, or corrupted."""
+
+
+class UbinOutputExists(UbinSecureError):
+    """Destination already exists and overwrite was not explicitly requested."""
+
+
+class UbinKeyError(UbinSecureError):
+    """The provided UBIN Secure key is invalid."""

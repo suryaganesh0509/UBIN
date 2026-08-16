@@ -10,7 +10,7 @@ from .errors import (
     UbinPermissionDenied,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 
 def open(source) -> UbinObject:
@@ -36,3 +36,29 @@ __all__ = [
     "UbinClosed",
     "UbinInvalidRange",
 ]
+
+
+from .secure import SecureSource, decrypt_file
+
+
+def secure(source, *, key=None) -> SecureSource:
+    """
+    Create a UBIN Secure source.
+
+    Phase 0.2 is local-only:
+        receipt = ubin.secure("file.bin").save("file.ubs")
+        ubin.decrypt("file.ubs", "restored.bin", key=receipt.key)
+
+    Phase 0.3 will replace manual key handoff with a secure client/server session.
+    """
+    return SecureSource(source, key=key)
+
+
+def decrypt(secure_source, destination, *, key, overwrite=False):
+    """Restore an authenticated UBIN Secure 0.2 container."""
+    return decrypt_file(
+        secure_source,
+        destination,
+        key=key,
+        overwrite=overwrite,
+    )
