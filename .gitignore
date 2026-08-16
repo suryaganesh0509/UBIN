@@ -1,0 +1,36 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+
+# Packaging
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# UBIN generated files
+*.ubs
+*.ubin-part
+*.tmp
+
+# Keys / certificates / secrets
+*.key
+*.pem
+*.p12
+*.pfx
+.env
+.env.*
