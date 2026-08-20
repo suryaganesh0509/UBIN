@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.3
+
+Windows CI and release-workflow portability correction.
+
+- Made package wheel validation version-dynamic instead of hard-coding v1.0.1.
+- Guarded `os.fchmod` for Python/platform combinations where it is unavailable.
+- Added a regression test for resumable state writers on platforms without `os.fchmod`.
+- Retains the Windows-safe PNG temporary-file cleanup introduced in v1.0.2.
+- No intentional public API or wire-format changes.
+
 ## 1.0.2
 
 Windows portability patch release.

@@ -34,7 +34,7 @@ jobs:
           python -m venv /tmp/ubin-wheel-test
           /tmp/ubin-wheel-test/bin/python -m pip install --upgrade pip
           /tmp/ubin-wheel-test/bin/python -m pip install dist/*.whl
-          /tmp/ubin-wheel-test/bin/python -c "import ubin; assert ubin.__version__ == '1.0.1'; print('UBIN wheel OK:', ubin.__version__)"
+          /tmp/ubin-wheel-test/bin/python -c "import importlib.metadata, ubin; expected=importlib.metadata.version('ubin'); assert ubin.__version__ == expected; print('UBIN wheel OK:', ubin.__version__)"
           /tmp/ubin-wheel-test/bin/ubin --version
 
       - name: Upload distributions

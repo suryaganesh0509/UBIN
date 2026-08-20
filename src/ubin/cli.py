@@ -56,7 +56,7 @@ def _print_receipt(receipt) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ubin",
-        description="UBIN v1.0.2 — universal binary access and secure transport/carriers",
+        description="UBIN v1.0.3 — universal binary access and secure transport/carriers",
     )
     parser.add_argument("--version", action="version", version=f"UBIN {ubin.__version__}")
     sub = parser.add_subparsers(dest="command", required=True)

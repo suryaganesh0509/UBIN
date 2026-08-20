@@ -89,3 +89,22 @@ def test_png_error_cleanup_closes_fd_before_windows_style_unlink(
     for fd in tracked_fds:
         with pytest.raises(OSError):
             os.fstat(fd)
+
+
+def test_resume_state_writers_work_without_fchmod(tmp_path, monkeypatch):
+    """Platforms without os.fchmod must remain supported."""
+    import json
+
+    from ubin.secure import krp_transfer
+    from ubin.secure import resume
+
+    monkeypatch.delattr(os, "fchmod", raising=False)
+
+    resume_path = tmp_path / "resume.json"
+    krp_path = tmp_path / "krp.json"
+
+    resume._atomic_write_json(resume_path, {"kind": "resume"})
+    krp_transfer._atomic_write_json(krp_path, {"kind": "krp"})
+
+    assert json.loads(resume_path.read_text()) == {"kind": "resume"}
+    assert json.loads(krp_path.read_text()) == {"kind": "krp"}

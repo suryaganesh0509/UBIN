@@ -120,10 +120,12 @@ def _atomic_write_json(path: Path, data: dict[str, Any]) -> None:
     )
     temp = Path(temp_name)
     try:
-        try:
-            os.fchmod(fd, 0o600)
-        except OSError:
-            pass
+        fchmod = getattr(os, "fchmod", None)
+        if fchmod is not None:
+            try:
+                fchmod(fd, 0o600)
+            except OSError:
+                pass
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(data, f, sort_keys=True, separators=(",", ":"))
             f.flush()
