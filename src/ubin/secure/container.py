@@ -79,6 +79,39 @@ class SecureSource:
         # tested. Phase 0.3 will replace this with automatic session key exchange.
         return self._key
 
+
+    def send(
+        self,
+        host: str,
+        *,
+        port: int,
+        cafile,
+        server_hostname: str | None = None,
+        frame_size: int = DEFAULT_SECURE_FRAME_SIZE,
+        timeout: float = 20.0,
+        certfile=None,
+        keyfile=None,
+    ):
+        """
+        Send the source through UBIN Secure v0.3.
+
+        Unlike local v0.2 save/decrypt, the developer does not pass a raw
+        encryption key. A fresh application-layer key is established from
+        an ephemeral X25519 exchange inside the authenticated TLS channel.
+        """
+        from .network import send_secure_file
+
+        return send_secure_file(
+            self._source,
+            host,
+            port=port,
+            cafile=cafile,
+            server_hostname=server_hostname,
+            frame_size=frame_size,
+            timeout=timeout,
+            certfile=certfile,
+            keyfile=keyfile,
+        )
     def save(
         self,
         destination,

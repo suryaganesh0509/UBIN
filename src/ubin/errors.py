@@ -44,3 +44,19 @@ class UbinOutputExists(UbinSecureError):
 
 class UbinKeyError(UbinSecureError):
     """The provided UBIN Secure key is invalid."""
+
+
+class UbinNetworkError(UbinSecureError):
+    """Base error for UBIN Secure network operations."""
+
+
+class UbinProtocolError(UbinNetworkError):
+    """The peer sent an invalid or unsupported UBIN network message."""
+
+
+class UbinHandshakeError(UbinNetworkError):
+    """UBIN application-level session establishment failed."""
+
+
+class UbinTLSVerificationError(UbinNetworkError):
+    """TLS peer certificate verification failed."""

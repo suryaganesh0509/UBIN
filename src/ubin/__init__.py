@@ -10,7 +10,7 @@ from .errors import (
     UbinPermissionDenied,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 
 def open(source) -> UbinObject:
@@ -61,4 +61,31 @@ def decrypt(secure_source, destination, *, key, overwrite=False):
         destination,
         key=key,
         overwrite=overwrite,
+    )
+
+
+from .secure import SecureServer
+
+
+def secure_server(
+    *,
+    host="127.0.0.1",
+    port=0,
+    certfile,
+    keyfile,
+    output_dir,
+    timeout=20.0,
+    overwrite=False,
+    client_ca=None,
+):
+    """Create a UBIN Secure v0.3 TLS server."""
+    return SecureServer(
+        host=host,
+        port=port,
+        certfile=certfile,
+        keyfile=keyfile,
+        output_dir=output_dir,
+        timeout=timeout,
+        overwrite=overwrite,
+        client_ca=client_ca,
     )

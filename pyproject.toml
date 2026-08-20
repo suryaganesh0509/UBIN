@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ubin"
-version = "0.2.0"
+version = "0.3.0"
 description = "UBIN reference implementation: universal, lazy binary access for arbitrary files."
 readme = "README.md"
 requires-python = ">=3.10"

@@ -1,112 +1,99 @@
-# UBIN-PY 0.2 — Core + Secure Local Prototype
+# UBIN-PY 0.3 — Secure Client/Server Session
 
-UBIN 0.2 builds on the tested UBIN 0.1 lazy binary access layer.
+UBIN 0.3 keeps the v0.1 universal binary API and v0.2 local secure-container
+API, then adds authenticated client/server transfer.
 
-## UBIN Core
+## Core idea
 
 ```python
 import ubin
 
-with ubin.open("anything.unknown") as x:
-    print(x.info())
-    print(x.read_at(0, 64))
-    print(x.hash())
+receipt = ubin.secure("anything.future").send(
+    "server.example",
+    port=9443,
+    cafile="trusted-ca.pem",
+)
 ```
 
-Unknown extensions remain valid UBIN inputs.
+The normal network path does **not** require the developer to copy or pass an
+AES key.
 
-## UBIN Secure 0.2
+## What v0.3 adds
 
-Phase 0.2 deliberately proves local authenticated encryption before networking,
-KRP pixel permutation, or PNG carriers are added.
+- TLS 1.3 minimum transport
+- server certificate verification
+- optional mutual TLS client certificates
+- ephemeral X25519 application key agreement inside the TLS connection
+- HKDF-SHA256 session-key derivation
+- separate HKDF-derived per-transfer AES-256 key
+- AES-256-GCM authenticated encrypted frames
+- fresh transfer id and 96-bit nonce base
+- bounded-memory streaming
+- exact SHA-256 verification at the receiver
+- authenticated success acknowledgement back to the sender
+- atomic receiver publication using a temporary file + `os.replace`
+- unknown/custom file extensions accepted
+- no raw transfer key in `NetworkSendReceipt`
+
+## Why both TLS and UBIN encryption?
+
+TLS protects the network connection and authenticates the server. UBIN then
+derives its own ephemeral application-layer key and encrypts the file frames.
+This keeps the UBIN transfer format/session independent of manual developer
+key management.
+
+## Local v0.2 API remains available
 
 ```python
-import ubin
-
-secured = ubin.secure("sample.surya123")
+secured = ubin.secure("sample.bin")
 receipt = secured.save("sample.ubs")
 
-print("Key:", receipt.key.hex())
-print("SHA-256:", receipt.sha256)
-
-restore = ubin.decrypt(
+ubin.decrypt(
     "sample.ubs",
-    "sample_restored.surya123",
+    "restored.bin",
     key=receipt.key,
 )
-
-print("Restored SHA-256:", restore.sha256)
 ```
 
-### Security properties in 0.2
+That key-oriented API is retained only for backward-compatible local v0.2
+containers. The new v0.3 network API does not require it.
 
-- AES-256-GCM per frame
-- fresh random 96-bit nonce base per container
-- deterministic unique 96-bit nonce derivation per frame
-- random 128-bit session ID
-- header and frame metadata authenticated as AAD
-- SHA-256 final digest encrypted/authenticated as a final record
-- fixed/bounded streaming memory
-- wrong keys rejected
-- modified ciphertext rejected
-- malformed/truncated containers rejected
-- trailing unauthenticated data rejected
-- output created through same-directory temporary file + `os.replace`
-- existing outputs are not overwritten unless explicitly requested
-- encryption key is **not stored inside the secure container**
-
-### Important
-
-0.2 exposes `receipt.key` only because this is a local cryptographic
-round-trip prototype. Do not transmit that key beside the `.ubs` file.
-
-UBIN 0.3 will introduce authenticated client/server session key establishment
-so the developer does not manually pass raw keys.
-
-## Setup
+## Local network demo
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+python manual_network_demo.py
+```
+
+Expected important lines:
+
+```text
+TLS: TLSv1.3
+NO MANUAL KEY: True
+MATCH: True
+```
+
+The demo generates a temporary localhost self-signed certificate solely for
+local testing. Production deployments must use their normal trusted
+certificate infrastructure.
+
+## Tests
+
+```bash
 pytest -q
 ```
 
-## Manual test
+The test suite includes all v0.1/v0.2 tests plus:
 
-Create `test_secure_ubin.py`:
+- exact TLS client/server round trips
+- empty/tiny/multi-megabyte transfer
+- TLS 1.3 assertion
+- untrusted certificate rejection
+- X25519 session-key parity
+- fresh sessions and transfer IDs
+- no raw key exposed in network receipts
 
-```python
-import ubin
+## Scope
 
-secured = ubin.secure("sample.surya123")
-receipt = secured.save("sample.ubs")
-
-print("Secure file:", receipt.output)
-print("Frames:", receipt.frame_count)
-print("Original SHA-256:", receipt.sha256)
-print("Temporary phase-0.2 key:", receipt.key.hex())
-
-restored = ubin.decrypt(
-    "sample.ubs",
-    "sample_restored.surya123",
-    key=receipt.key,
-)
-
-print("Restored:", restored.output)
-print("Restored SHA-256:", restored.sha256)
-print("MATCH:", restored.sha256 == receipt.sha256)
-```
-
-Run:
-
-```bash
-python test_secure_ubin.py
-```
-
-Expected final line:
-
-```text
-MATCH: True
-```
+v0.3 is intentionally a **one-connection / one-file reference transport**.
+v0.4 is reserved for interruption-safe resume, authenticated checkpoints,
+retry state, and long-running server operation.
