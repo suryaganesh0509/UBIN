@@ -10,7 +10,7 @@ from .errors import (
     UbinPermissionDenied,
 )
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 
 def open(source) -> UbinObject:
@@ -45,11 +45,15 @@ def secure(source, *, key=None) -> SecureSource:
     """
     Create a UBIN Secure source.
 
-    Phase 0.2 is local-only:
+    Local v0.2 container:
         receipt = ubin.secure("file.bin").save("file.ubs")
         ubin.decrypt("file.ubs", "restored.bin", key=receipt.key)
 
-    Phase 0.3 will replace manual key handoff with a secure client/server session.
+    Network v0.3:
+        ubin.secure("file.bin").send(...)
+
+    Resumable network v0.4:
+        ubin.secure("file.bin").send(..., resume=True)
     """
     return SecureSource(source, key=key)
 
@@ -77,8 +81,9 @@ def secure_server(
     timeout=20.0,
     overwrite=False,
     client_ca=None,
+    resume_state_dir=None,
 ):
-    """Create a UBIN Secure v0.3 TLS server."""
+    """Create a UBIN Secure server supporting v0.3 and resumable v0.4 transfers."""
     return SecureServer(
         host=host,
         port=port,
@@ -88,4 +93,5 @@ def secure_server(
         timeout=timeout,
         overwrite=overwrite,
         client_ca=client_ca,
+        resume_state_dir=resume_state_dir,
     )

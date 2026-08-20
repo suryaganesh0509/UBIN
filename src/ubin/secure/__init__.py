@@ -32,3 +32,16 @@ __all__ += [
     "send_secure_file",
     "generate_localhost_certificate",
 ]
+
+
+from .resume import (
+    ResumableReceiveReceipt,
+    ResumableSendReceipt,
+    send_resumable_file,
+)
+
+__all__ += [
+    "ResumableSendReceipt",
+    "ResumableReceiveReceipt",
+    "send_resumable_file",
+]

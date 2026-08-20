@@ -91,16 +91,41 @@ class SecureSource:
         timeout: float = 20.0,
         certfile=None,
         keyfile=None,
+        resume: bool = False,
+        state_dir=None,
     ):
         """
-        Send the source through UBIN Secure v0.3.
+        Send through UBIN Secure.
 
-        Unlike local v0.2 save/decrypt, the developer does not pass a raw
-        encryption key. A fresh application-layer key is established from
-        an ephemeral X25519 exchange inside the authenticated TLS channel.
+        v0.3 path:
+            resume=False
+            One secure TLS/X25519 transfer.
+
+        v0.4 path:
+            resume=True
+            Persist an opaque resume ticket locally, checkpoint authenticated
+            frames on the server, and continue from the last durable frame
+            after a disconnect.
+
+        No raw AES transfer key is exposed to the developer in either path.
         """
-        from .network import send_secure_file
+        if resume:
+            from .resume import send_resumable_file
 
+            return send_resumable_file(
+                self._source,
+                host,
+                port=port,
+                cafile=cafile,
+                server_hostname=server_hostname,
+                frame_size=frame_size,
+                timeout=timeout,
+                certfile=certfile,
+                keyfile=keyfile,
+                state_dir=state_dir,
+            )
+
+        from .network import send_secure_file
         return send_secure_file(
             self._source,
             host,

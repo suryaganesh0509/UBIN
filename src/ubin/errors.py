@@ -60,3 +60,15 @@ class UbinHandshakeError(UbinNetworkError):
 
 class UbinTLSVerificationError(UbinNetworkError):
     """TLS peer certificate verification failed."""
+
+
+class UbinResumeError(UbinNetworkError):
+    """A resumable transfer cannot safely continue."""
+
+
+class UbinResumeTicketError(UbinResumeError):
+    """A resume ticket is invalid or does not match server state."""
+
+
+class UbinSourceChanged(UbinResumeError):
+    """The source changed since the resumable transfer started."""

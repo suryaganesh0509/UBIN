@@ -346,11 +346,12 @@ def send_secure_file(
 
 class SecureServer:
     """
-    Small UBIN Secure v0.3 reference server.
+    UBIN Secure network reference server.
 
-    One `serve_once()` call accepts one connection and one file transfer.
-    It is intentionally simple so the protocol can be tested before v0.4
-    adds resumability and long-running production service behavior.
+    It accepts both the v0.3 one-shot transfer protocol and the v0.4
+    resumable transfer protocol. v0.4 durable checkpoints are stored
+    separately from the final destination and are never published as
+    completed files.
     """
 
     def __init__(
@@ -364,12 +365,23 @@ class SecureServer:
         timeout: float = DEFAULT_TIMEOUT,
         overwrite: bool = False,
         client_ca=None,
+        resume_state_dir=None,
+        _interrupt_once_after_frames=None,
     ):
         self.host = host
         self.timeout = timeout
         self.output_dir = Path(output_dir).expanduser()
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.overwrite = overwrite
+        self._resume_state_dir = (
+            Path(resume_state_dir).expanduser()
+            if resume_state_dir is not None
+            else self.output_dir / ".ubin-resume"
+        )
+        self._resume_secret_path = self._resume_state_dir / "server_secret.key"
+        self._resume_secret = None
+        self._interrupt_once_after_frames = _interrupt_once_after_frames
+        self._interruption_triggered = False
         self._context = _server_context(
             certfile=certfile,
             keyfile=keyfile,
@@ -430,10 +442,46 @@ class SecureServer:
         self,
         tls_sock: ssl.SSLSocket,
         tls_version: str,
-    ) -> NetworkReceiveReceipt:
+    ):
         session_key, session_id = _server_handshake(tls_sock)
 
-        fixed = _recv_exact(tls_sock, TRANSFER_FIXED.size)
+        first_magic = _recv_exact(tls_sock, 4)
+
+        if first_magic == b"UBT3":
+            return self._receive_v03_after_magic(
+                tls_sock,
+                tls_version,
+                session_key,
+                session_id,
+                first_magic,
+            )
+
+        if first_magic == b"UBT4":
+            from .resume import receive_resumable_after_magic
+
+            return receive_resumable_after_magic(
+                self,
+                tls_sock,
+                tls_version,
+                session_key,
+                session_id,
+                first_magic,
+            )
+
+        raise UbinProtocolError("unsupported UBIN network transfer magic")
+
+    def _receive_v03_after_magic(
+        self,
+        tls_sock: ssl.SSLSocket,
+        tls_version: str,
+        session_key: bytes,
+        session_id: str,
+        first_magic: bytes,
+    ) -> NetworkReceiveReceipt:
+        fixed = first_magic + _recv_exact(
+            tls_sock,
+            TRANSFER_FIXED.size - len(first_magic),
+        )
         filename_len = TRANSFER_FIXED.unpack(fixed)[-1]
         if filename_len > MAX_FILENAME_BYTES:
             raise UbinProtocolError(
