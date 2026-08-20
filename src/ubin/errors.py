@@ -72,3 +72,7 @@ class UbinResumeTicketError(UbinResumeError):
 
 class UbinSourceChanged(UbinResumeError):
     """The source changed since the resumable transfer started."""
+
+
+class UbinCarrierError(UbinSecureError):
+    """Lossless UBIN carrier is invalid, unsupported, or corrupted."""

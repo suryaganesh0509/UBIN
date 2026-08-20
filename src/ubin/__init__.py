@@ -1,33 +1,57 @@
 from __future__ import annotations
 
-from .core import UbinInfo, UbinObject
+from .core import UbinInfo, UbinMemoryObject, UbinObject, UbinStreamObject
 from .errors import (
+    UbinAuthenticationError,
+    UbinCarrierError,
     UbinClosed,
+    UbinCorruptionError,
     UbinError,
+    UbinHandshakeError,
+    UbinInvalidHeader,
     UbinInvalidRange,
+    UbinKeyError,
+    UbinNetworkError,
     UbinNotAFile,
     UbinNotFound,
+    UbinOutputExists,
     UbinPermissionDenied,
+    UbinProtocolError,
+    UbinResumeError,
+    UbinResumeTicketError,
+    UbinSecureError,
+    UbinSourceChanged,
+    UbinTLSVerificationError,
 )
 
-__version__ = "0.5.0"
+__version__ = "1.0.0"
 
 
-def open(source) -> UbinObject:
+def open(source, *, name=None):
     """
-    Public UBIN entry point.
+    Public UBIN entry point for paths, bytes-like buffers, or seekable binary streams.
 
-    Example:
-        import ubin
-        with ubin.open("anything.bin") as x:
-            print(x.info())
+    Examples:
+        ubin.open("anything.bin")
+        ubin.open(b"raw bytes", name="packet.bin")
+        ubin.open(io.BytesIO(b"stream bytes"), name="stream.bin")
     """
-    return UbinObject(source)
+    import os
+
+    if isinstance(source, (str, os.PathLike)):
+        return UbinObject(source)
+    if isinstance(source, (bytes, bytearray, memoryview)):
+        return UbinMemoryObject(source, name=name or "memory.bin")
+    if all(hasattr(source, attr) for attr in ("read", "seek", "tell")):
+        return UbinStreamObject(source, name=name or getattr(source, "name", "stream.bin"))
+    raise TypeError("UBIN source must be a path, bytes-like buffer, or seekable binary stream")
 
 
 __all__ = [
     "open",
     "UbinObject",
+    "UbinMemoryObject",
+    "UbinStreamObject",
     "UbinInfo",
     "UbinError",
     "UbinNotFound",
@@ -35,6 +59,20 @@ __all__ = [
     "UbinPermissionDenied",
     "UbinClosed",
     "UbinInvalidRange",
+    "UbinSecureError",
+    "UbinInvalidHeader",
+    "UbinAuthenticationError",
+    "UbinCorruptionError",
+    "UbinOutputExists",
+    "UbinKeyError",
+    "UbinNetworkError",
+    "UbinProtocolError",
+    "UbinHandshakeError",
+    "UbinTLSVerificationError",
+    "UbinResumeError",
+    "UbinResumeTicketError",
+    "UbinSourceChanged",
+    "UbinCarrierError",
 ]
 
 
@@ -98,3 +136,57 @@ def secure_server(
         client_ca=client_ca,
         resume_state_dir=resume_state_dir,
     )
+
+
+from .secure import (
+    ImageCarrierReceipt,
+    ImageRestoreReceipt,
+    create_image_carrier,
+    restore_image_carrier,
+)
+
+
+def to_image(
+    source,
+    destination,
+    *,
+    passphrase,
+    frame_size=1024 * 1024,
+    krp_block_size=4096,
+    width=1024,
+    overwrite=False,
+):
+    """Create a lossless authenticated UBIN v1 PNG carrier."""
+    return create_image_carrier(
+        source,
+        destination,
+        passphrase=passphrase,
+        frame_size=frame_size,
+        krp_block_size=krp_block_size,
+        width=width,
+        overwrite=overwrite,
+    )
+
+
+def from_image(
+    carrier,
+    destination=None,
+    *,
+    passphrase,
+    krp_block_size=4096,
+    overwrite=False,
+):
+    """Restore a file from a lossless authenticated UBIN v1 PNG carrier."""
+    return restore_image_carrier(
+        carrier,
+        destination,
+        passphrase=passphrase,
+        krp_block_size=krp_block_size,
+        overwrite=overwrite,
+    )
+
+
+__all__ += [
+    "secure", "decrypt", "secure_server", "to_image", "from_image",
+    "ImageCarrierReceipt", "ImageRestoreReceipt",
+]

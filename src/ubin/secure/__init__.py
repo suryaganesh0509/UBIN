@@ -70,3 +70,17 @@ __all__ += [
     "KrpReceiveReceipt",
     "send_krp_resumable_file",
 ]
+
+from .image_carrier import (
+    ImageCarrierReceipt,
+    ImageRestoreReceipt,
+    create_image_carrier,
+    restore_image_carrier,
+)
+
+__all__ += [
+    "ImageCarrierReceipt",
+    "ImageRestoreReceipt",
+    "create_image_carrier",
+    "restore_image_carrier",
+]

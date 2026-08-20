@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ubin"
-version = "0.5.0"
-description = "UBIN reference implementation: universal, lazy binary access for arbitrary files."
+version = "1.0.0"
+description = "UBIN: universal binary access, authenticated security, resumable transfer, KRP, and lossless PNG carriers."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -15,7 +15,7 @@ authors = [
 dependencies = ["cryptography>=42"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "build>=1.2"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -23,3 +23,12 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[project.scripts]
+ubin = "ubin.cli:main"
+
+[project.urls]
+Repository = "https://github.com/suryaganesh0509/UBIN"
+
+[tool.setuptools.package-data]
+ubin = ["py.typed"]

@@ -1,0 +1,14 @@
+include LICENSE
+include README.md
+include CHANGELOG.md
+include enduser_demo.py
+include manual_secure_demo.py
+include manual_network_demo.py
+include manual_resume_demo.py
+include manual_krp_demo.py
+include manual_image_demo.py
+include sample.surya123
+recursive-include docs *.md
+recursive-include examples *.py
+
+include FINAL_VALIDATION.md

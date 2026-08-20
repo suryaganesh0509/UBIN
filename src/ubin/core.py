@@ -237,3 +237,294 @@ class UbinObject:
 
     def __exit__(self, exc_type, exc, tb) -> None:
         self.close()
+
+
+class UbinMemoryObject:
+    """Lazy cursor/read view over an in-memory bytes-like object."""
+
+    __slots__ = ("_view", "_name", "_type", "_closed", "_cursor", "_cursor_lock")
+
+    def __init__(self, data, *, name: str = "memory.bin"):
+        try:
+            view = memoryview(data)
+        except TypeError as exc:
+            raise TypeError("UBIN memory source must support the buffer protocol") from exc
+        if view.ndim != 1 or view.itemsize != 1 or not view.contiguous:
+            # Normalize unusual buffers (for example multi-dimensional array views)
+            # into a byte-oriented snapshot. Ordinary bytes/bytearray/memoryview do
+            # not take this path.
+            view = memoryview(view.tobytes())
+        if view.format not in ("B", "b", "c"):
+            try:
+                view = view.cast("B")
+            except (TypeError, ValueError):
+                view = memoryview(view.tobytes())
+
+        self._view = view
+        self._name = str(name or "memory.bin")
+        self._type = detect_type(bytes(view[:PROBE_SIZE]))
+        self._closed = False
+        self._cursor = 0
+        self._cursor_lock = threading.RLock()
+
+    def _ensure_open(self):
+        if self._closed:
+            raise UbinClosed(f"UBIN memory source is closed: {self._name}")
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def path(self):
+        return None
+
+    @property
+    def size(self) -> int:
+        return len(self._view)
+
+    @property
+    def type(self) -> str:
+        return self._type
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    def info(self) -> UbinInfo:
+        self._ensure_open()
+        return UbinInfo(self.name, f"<memory:{self.name}>", self.size, self.type)
+
+    def read(self, length: int) -> bytes:
+        self._ensure_open()
+        if length < 0:
+            raise UbinInvalidRange("length must be >= 0")
+        with self._cursor_lock:
+            end = min(self.size, self._cursor + length)
+            block = self._view[self._cursor:end].tobytes()
+            self._cursor = end
+            return block
+
+    def seek(self, offset: int) -> int:
+        self._ensure_open()
+        if offset < 0:
+            raise UbinInvalidRange("offset must be >= 0")
+        with self._cursor_lock:
+            self._cursor = min(offset, self.size)
+            return self._cursor
+
+    def tell(self) -> int:
+        self._ensure_open()
+        with self._cursor_lock:
+            return self._cursor
+
+    def read_at(self, offset: int, length: int) -> bytes:
+        self._ensure_open()
+        if offset < 0 or length < 0:
+            raise UbinInvalidRange("offset and length must be >= 0")
+        if length == 0 or offset >= self.size:
+            return b""
+        return self._view[offset:min(self.size, offset + length)].tobytes()
+
+    def stream(self, block_size: int = DEFAULT_BLOCK_SIZE, *, start: int = 0) -> Iterator[bytes]:
+        self._ensure_open()
+        if block_size <= 0:
+            raise UbinInvalidRange("block_size must be > 0")
+        if start < 0:
+            raise UbinInvalidRange("start must be >= 0")
+        offset = start
+        while offset < self.size:
+            block = self.read_at(offset, min(block_size, self.size - offset))
+            if not block:
+                break
+            yield block
+            offset += len(block)
+
+    def bytes(self, *, max_bytes: int | None = None) -> bytes:
+        self._ensure_open()
+        if max_bytes is not None and self.size > max_bytes:
+            raise UbinInvalidRange(
+                f"source is {self.size} bytes; exceeds max_bytes={max_bytes}"
+            )
+        return self._view.tobytes()
+
+    def hash(self, algorithm: str = "sha256", *, block_size: int = DEFAULT_BLOCK_SIZE) -> str:
+        self._ensure_open()
+        if block_size <= 0:
+            raise UbinInvalidRange("block_size must be > 0")
+        try:
+            digest = hashlib.new(algorithm)
+        except ValueError as exc:
+            raise ValueError(f"unsupported hash algorithm: {algorithm}") from exc
+        for block in self.stream(block_size):
+            digest.update(block)
+        return digest.hexdigest()
+
+    def verify(self, expected_hex_digest: str, algorithm: str = "sha256") -> bool:
+        return hmac.compare_digest(
+            self.hash(algorithm).lower(), expected_hex_digest.strip().lower()
+        )
+
+    def close(self) -> None:
+        if not self._closed:
+            try:
+                self._view.release()
+            except Exception:
+                pass
+            self._closed = True
+
+    def __enter__(self):
+        self._ensure_open()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
+
+
+class UbinStreamObject:
+    """Read-only UBIN view over a seekable binary stream without taking ownership."""
+
+    __slots__ = ("_stream", "_name", "_size", "_type", "_closed", "_cursor_lock")
+
+    def __init__(self, stream, *, name: str = "stream.bin"):
+        if not all(hasattr(stream, attr) for attr in ("read", "seek", "tell")):
+            raise TypeError("UBIN stream source must provide read(), seek(), and tell()")
+        self._stream = stream
+        self._name = str(name or getattr(stream, "name", "stream.bin"))
+        self._closed = False
+        self._cursor_lock = threading.RLock()
+
+        with self._cursor_lock:
+            current = 0
+            try:
+                current = stream.tell()
+                stream.seek(0, os.SEEK_END)
+                self._size = stream.tell()
+                stream.seek(0)
+                prefix = stream.read(PROBE_SIZE)
+                if not isinstance(prefix, (bytes, bytearray)):
+                    raise TypeError("UBIN stream must be opened in binary mode")
+                self._type = detect_type(bytes(prefix))
+                stream.seek(0)
+            except Exception:
+                try:
+                    stream.seek(current)
+                except Exception:
+                    pass
+                raise
+
+    def _ensure_open(self):
+        if self._closed:
+            raise UbinClosed(f"UBIN stream source is closed: {self._name}")
+
+    @property
+    def name(self) -> str:
+        return Path(self._name).name if self._name else "stream.bin"
+
+    @property
+    def path(self):
+        return None
+
+    @property
+    def size(self) -> int:
+        return self._size
+
+    @property
+    def type(self) -> str:
+        return self._type
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    def info(self) -> UbinInfo:
+        self._ensure_open()
+        return UbinInfo(self.name, f"<stream:{self.name}>", self.size, self.type)
+
+    def read(self, length: int) -> bytes:
+        self._ensure_open()
+        if length < 0:
+            raise UbinInvalidRange("length must be >= 0")
+        with self._cursor_lock:
+            data = self._stream.read(length)
+            if not isinstance(data, (bytes, bytearray)):
+                raise TypeError("UBIN stream must return bytes")
+            return bytes(data)
+
+    def seek(self, offset: int) -> int:
+        self._ensure_open()
+        if offset < 0:
+            raise UbinInvalidRange("offset must be >= 0")
+        with self._cursor_lock:
+            return self._stream.seek(offset)
+
+    def tell(self) -> int:
+        self._ensure_open()
+        with self._cursor_lock:
+            return self._stream.tell()
+
+    def read_at(self, offset: int, length: int) -> bytes:
+        self._ensure_open()
+        if offset < 0 or length < 0:
+            raise UbinInvalidRange("offset and length must be >= 0")
+        if length == 0 or offset >= self._size:
+            return b""
+        with self._cursor_lock:
+            current = self._stream.tell()
+            try:
+                self._stream.seek(offset)
+                data = self._stream.read(length)
+                if not isinstance(data, (bytes, bytearray)):
+                    raise TypeError("UBIN stream must return bytes")
+                return bytes(data)
+            finally:
+                self._stream.seek(current)
+
+    def stream(self, block_size: int = DEFAULT_BLOCK_SIZE, *, start: int = 0) -> Iterator[bytes]:
+        self._ensure_open()
+        if block_size <= 0:
+            raise UbinInvalidRange("block_size must be > 0")
+        if start < 0:
+            raise UbinInvalidRange("start must be >= 0")
+        offset = start
+        while offset < self._size:
+            block = self.read_at(offset, min(block_size, self._size - offset))
+            if not block:
+                break
+            yield block
+            offset += len(block)
+
+    def bytes(self, *, max_bytes: int | None = None) -> bytes:
+        self._ensure_open()
+        if max_bytes is not None and self._size > max_bytes:
+            raise UbinInvalidRange(
+                f"source is {self._size} bytes; exceeds max_bytes={max_bytes}"
+            )
+        return b"".join(self.stream())
+
+    def hash(self, algorithm: str = "sha256", *, block_size: int = DEFAULT_BLOCK_SIZE) -> str:
+        self._ensure_open()
+        try:
+            digest = hashlib.new(algorithm)
+        except ValueError as exc:
+            raise ValueError(f"unsupported hash algorithm: {algorithm}") from exc
+        for block in self.stream(block_size):
+            digest.update(block)
+        return digest.hexdigest()
+
+    def verify(self, expected_hex_digest: str, algorithm: str = "sha256") -> bool:
+        return hmac.compare_digest(
+            self.hash(algorithm).lower(), expected_hex_digest.strip().lower()
+        )
+
+    def close(self) -> None:
+        # UBIN does not own caller-provided streams; closing the UBIN view does
+        # not close the underlying stream.
+        self._closed = True
+
+    def __enter__(self):
+        self._ensure_open()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()

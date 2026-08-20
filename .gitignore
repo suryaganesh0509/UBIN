@@ -1,36 +1,26 @@
-# macOS
 .DS_Store
-
-# Python
 __pycache__/
 *.py[cod]
-
-# Virtual environments
 .venv/
 venv/
 env/
-
-# Testing
 .pytest_cache/
-
-# Packaging
+.coverage
+htmlcov/
 build/
 dist/
 *.egg-info/
-
-# IDE
 .vscode/
 .idea/
-
-# UBIN generated files
 *.ubs
 *.ubin-part
 *.tmp
-
-# Keys / certificates / secrets
 *.key
 *.pem
 *.p12
 *.pfx
 .env
 .env.*
+
+# Demo outputs
+sample_restored.surya123

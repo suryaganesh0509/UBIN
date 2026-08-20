@@ -161,3 +161,139 @@ def frame_context(
         + nonce_base
         + frame_number.to_bytes(8, "big")
     )
+
+
+def permute_file(
+    source_path,
+    destination_path,
+    key: bytes,
+    *,
+    context: bytes,
+    block_size: int = DEFAULT_KRP_BLOCK_SIZE,
+) -> int:
+    """Permute a file with bounded memory and return bytes written."""
+    from pathlib import Path
+    import os
+
+    source = Path(source_path)
+    destination = Path(destination_path)
+    size = source.stat().st_size
+    _validate(key, size, block_size, context)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    block_count = size // block_size
+    full_len = block_count * block_size
+
+    with source.open("rb", buffering=0) as src, destination.open("wb", buffering=0) as out:
+        out.truncate(size)
+        src_fd = src.fileno()
+        out_fd = out.fileno()
+
+        for source_index in range(block_count):
+            target_index = _permuted_index(source_index, block_count, key, context)
+            src_offset = source_index * block_size
+            dst_offset = target_index * block_size
+            if hasattr(os, "pread"):
+                block = os.pread(src_fd, block_size, src_offset)
+            else:
+                src.seek(src_offset)
+                block = src.read(block_size)
+            if len(block) != block_size:
+                raise UbinPermutationError("source changed during KRP file permutation")
+            if hasattr(os, "pwrite"):
+                written = os.pwrite(out_fd, block, dst_offset)
+                if written != len(block):
+                    raise UbinPermutationError("short KRP file write")
+            else:
+                out.seek(dst_offset)
+                out.write(block)
+
+        if full_len < size:
+            tail_len = size - full_len
+            if hasattr(os, "pread"):
+                tail = os.pread(src_fd, tail_len, full_len)
+            else:
+                src.seek(full_len)
+                tail = src.read(tail_len)
+            if len(tail) != tail_len:
+                raise UbinPermutationError("source changed during KRP tail read")
+            if hasattr(os, "pwrite"):
+                written = os.pwrite(out_fd, tail, full_len)
+                if written != len(tail):
+                    raise UbinPermutationError("short KRP tail write")
+            else:
+                out.seek(full_len)
+                out.write(tail)
+
+        out.flush()
+        os.fsync(out.fileno())
+
+    return size
+
+
+def restore_file(
+    source_path,
+    destination_path,
+    key: bytes,
+    *,
+    context: bytes,
+    block_size: int = DEFAULT_KRP_BLOCK_SIZE,
+) -> int:
+    """Reverse :func:`permute_file` with bounded memory."""
+    from pathlib import Path
+    import os
+
+    source = Path(source_path)
+    destination = Path(destination_path)
+    size = source.stat().st_size
+    _validate(key, size, block_size, context)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    block_count = size // block_size
+    full_len = block_count * block_size
+
+    with source.open("rb", buffering=0) as src, destination.open("wb", buffering=0) as out:
+        out.truncate(size)
+        src_fd = src.fileno()
+        out_fd = out.fileno()
+
+        for original_index in range(block_count):
+            permuted_index = _permuted_index(original_index, block_count, key, context)
+            src_offset = permuted_index * block_size
+            dst_offset = original_index * block_size
+            if hasattr(os, "pread"):
+                block = os.pread(src_fd, block_size, src_offset)
+            else:
+                src.seek(src_offset)
+                block = src.read(block_size)
+            if len(block) != block_size:
+                raise UbinPermutationError("source changed during KRP file restoration")
+            if hasattr(os, "pwrite"):
+                written = os.pwrite(out_fd, block, dst_offset)
+                if written != len(block):
+                    raise UbinPermutationError("short KRP restore write")
+            else:
+                out.seek(dst_offset)
+                out.write(block)
+
+        if full_len < size:
+            tail_len = size - full_len
+            if hasattr(os, "pread"):
+                tail = os.pread(src_fd, tail_len, full_len)
+            else:
+                src.seek(full_len)
+                tail = src.read(tail_len)
+            if len(tail) != tail_len:
+                raise UbinPermutationError("source changed during KRP restore tail read")
+            if hasattr(os, "pwrite"):
+                written = os.pwrite(out_fd, tail, full_len)
+                if written != len(tail):
+                    raise UbinPermutationError("short KRP restore tail write")
+            else:
+                out.seek(full_len)
+                out.write(tail)
+
+        out.flush()
+        os.fsync(out.fileno())
+
+    return size
