@@ -25,6 +25,13 @@ def _sha256(data: bytes) -> str:
         bytes(range(256)) * 100,
         os.urandom(2 * 1024 * 1024 + 123),
     ],
+    ids=[
+        "empty",
+        "one-byte",
+        "text",
+        "all-byte-values",
+        "random-2MiB-plus",
+    ],
 )
 def test_encrypt_decrypt_exact_round_trip(tmp_path: Path, payload: bytes):
     source = tmp_path / "anything.unknownEXT"

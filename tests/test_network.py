@@ -44,6 +44,12 @@ def tls_material(tmp_path: Path):
         b"UBIN v0.3",
         os.urandom(2 * 1024 * 1024 + 123),
     ],
+    ids=[
+        "empty",
+        "one-byte",
+        "label",
+        "random-2MiB-plus",
+    ],
 )
 def test_tls_network_exact_round_trip(
     tmp_path: Path,
