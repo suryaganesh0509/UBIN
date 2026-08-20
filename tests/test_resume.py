@@ -9,7 +9,6 @@ import pytest
 import ubin
 from ubin.errors import (
     UbinNetworkError,
-    UbinResumeTicketError,
     UbinSourceChanged,
 )
 from ubin.secure import SecureServer, generate_localhost_certificate

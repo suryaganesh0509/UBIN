@@ -1,6 +1,15 @@
 from __future__ import annotations
 
 from .core import UbinInfo, UbinMemoryObject, UbinObject, UbinStreamObject
+from .secure import (
+    ImageCarrierReceipt,
+    ImageRestoreReceipt,
+    SecureServer,
+    SecureSource,
+    create_image_carrier,
+    decrypt_file,
+    restore_image_carrier,
+)
 from .errors import (
     UbinAuthenticationError,
     UbinCarrierError,
@@ -24,7 +33,7 @@ from .errors import (
     UbinTLSVerificationError,
 )
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 def open(source, *, name=None):
@@ -76,9 +85,6 @@ __all__ = [
 ]
 
 
-from .secure import SecureSource, decrypt_file
-
-
 def secure(source, *, key=None) -> SecureSource:
     """
     Create a UBIN Secure source.
@@ -109,9 +115,6 @@ def decrypt(secure_source, destination, *, key, overwrite=False):
     )
 
 
-from .secure import SecureServer
-
-
 def secure_server(
     *,
     host="127.0.0.1",
@@ -136,14 +139,6 @@ def secure_server(
         client_ca=client_ca,
         resume_state_dir=resume_state_dir,
     )
-
-
-from .secure import (
-    ImageCarrierReceipt,
-    ImageRestoreReceipt,
-    create_image_carrier,
-    restore_image_carrier,
-)
 
 
 def to_image(

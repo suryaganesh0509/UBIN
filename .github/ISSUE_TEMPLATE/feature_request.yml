@@ -1,0 +1,26 @@
+name: Feature request
+description: Propose an interoperable, measurable UBIN improvement
+title: "[feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      description: What concrete byte-handling problem should UBIN solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Include API/wire-format ideas if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: measurement
+    attributes:
+      label: How should we measure improvement?
+      description: Security, correctness, memory, speed, interoperability, or usability.
+    validations:
+      required: true

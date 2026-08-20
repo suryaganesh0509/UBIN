@@ -1,12 +1,53 @@
-# UBIN v1.0.0 — Universal Binary
+# UBIN v1.0.1 — Universal Binary
+
+[![CI](https://github.com/suryaganesh0509/UBIN/actions/workflows/ci.yml/badge.svg)](https://github.com/suryaganesh0509/UBIN/actions/workflows/ci.yml)
+[![Security](https://github.com/suryaganesh0509/UBIN/actions/workflows/security.yml/badge.svg)](https://github.com/suryaganesh0509/UBIN/actions/workflows/security.yml)
+[![Package](https://github.com/suryaganesh0509/UBIN/actions/workflows/package.yml/badge.svg)](https://github.com/suryaganesh0509/UBIN/actions/workflows/package.yml)
+[![codecov](https://codecov.io/gh/suryaganesh0509/UBIN/branch/main/graph/badge.svg)](https://codecov.io/gh/suryaganesh0509/UBIN)
+![Python](https://img.shields.io/badge/Python-3.10--3.14-3776AB)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 **UBIN handles the bytes. You handle the logic.**
+
+## Why UBIN exists
+
+Binary-heavy applications often accumulate one-off code paths for file extensions, buffers, streaming, integrity checks, encryption, interrupted transfers, and carrier formats. UBIN exists to put those byte-level concerns behind one small interface while keeping the invariants explicit: unknown formats remain valid input, full-file work stays streaming/bounded where possible, cryptographic security comes from established primitives, and restored output is published only after verification succeeds.
+
+UBIN is not a new cipher and it is not a magical compression algorithm. It is a reference runtime/specification for handling arbitrary bytes consistently across local access, authenticated storage, secure transfer, resume, reversible ciphertext layout, and a lossless PNG carrier.
+
+## Architecture at a glance
+
+```mermaid
+flowchart LR
+    A[File / bytes / stream] --> B[UBIN Core]
+    B --> C[Lazy reads / streaming / hash]
+    B --> D[Local Secure Container]
+    B --> E[Secure Network]
+    B --> F[PNG Carrier]
+    D --> G[AES-256-GCM]
+    E --> H[TLS 1.3]
+    H --> I[X25519 + HKDF]
+    I --> J[AES-256-GCM frames]
+    J --> K[Durable resume]
+    K --> L[KRP optional layout]
+    F --> M[AES-256-GCM]
+    M --> N[KRP]
+    N --> O[Lossless RGBA PNG]
+    C --> P[Exact bytes]
+    G --> P
+    L --> P
+    O --> P
+```
 
 UBIN is a Python reference implementation of a simple idea: applications should not need a different low-level byte-handling strategy for every file extension or future format. If a source is a regular file, UBIN can expose it as bytes, inspect it lazily, hash it, protect it, transfer it, resume an interrupted transfer, apply a reversible ciphertext layout, or wrap it in a lossless PNG carrier.
 
 Unknown format **does not** mean unsupported input.
 
-## Final v1.0 feature set
+## v1.0.1 compatibility promise
+
+v1.0.1 is an assurance and release-engineering hardening release. It intentionally preserves the public v1.0.0 API and wire/container behavior; the new work is CI, coverage, security scanning, fuzz/property testing, packaging/release automation, portability verification, and documentation.
+
+## Stable v1 feature set
 
 - Universal lazy binary access for arbitrary regular files
 - Extension-independent bounded signature detection
@@ -28,13 +69,25 @@ Unknown format **does not** mean unsupported input.
 
 ## Install
 
-From the project directory:
+Public install after the PyPI v1.0.1 release is published:
+
+```bash
+python3 -m pip install ubin
+```
+
+Until the PyPI release is visible, install the exact public GitHub tag:
+
+```bash
+python3 -m pip install "git+https://github.com/suryaganesh0509/UBIN.git@v1.0.1"
+```
+
+For repository development:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,security]"
 ```
 
 Verify:
@@ -46,7 +99,7 @@ python -c "import ubin; print(ubin.__version__)"
 Expected:
 
 ```text
-1.0.0
+1.0.1
 ```
 
 UBIN intentionally does **not** require NumPy. Raw file/byte handling does not need it, and avoiding a mandatory NumPy dependency keeps installation and memory overhead lower. The runtime dependency required by the security implementation is declared in `pyproject.toml` and is installed automatically.
@@ -262,7 +315,19 @@ python manual_image_demo.py
 pytest -q
 ```
 
-The v1.0 freeze candidate passes **86 tests** in the supplied suite, covering all earlier milestones plus PNG-carrier and package/CLI behavior.
+A single-file public-consumer smoke/integration example is also included:
+
+```bash
+python examples/public_consumer_test.py
+```
+
+If UBIN is not installed yet, the example has an explicit opt-in bootstrap mode for the exact public tag:
+
+```bash
+python examples/public_consumer_test.py --install
+```
+
+The v1.0.1 suite includes **110 deterministic regression/mutation cases plus 4 Hypothesis property tests (114 pytest cases when the `dev` extra is installed)**. CI runs the suite across Linux, macOS, and Windows on supported Python versions 3.10-3.14. Core-library line coverage is enforced at 82% and measured at 84%+ in the release validation environment; coverage is uploaded to Codecov. Security CI runs Ruff, Bandit, Semgrep CE, and `pip-audit`; a separate scheduled workflow runs bounded Atheris fuzz-smoke campaigns.
 
 The suite includes:
 
@@ -287,6 +352,9 @@ The suite includes:
 - file-level bounded-memory KRP
 - CLI info/hash/image pack/restore
 - public v1 API/version/dependency checks
+- Hypothesis KRP round-trip properties
+- Hypothesis PNG codec/parser fail-closed properties
+- coverage-guided Atheris fuzz targets for KRP and PNG parsing
 
 ## Complexity model
 
@@ -306,7 +374,8 @@ v0.2.0  Authenticated local secure container
 v0.3.0  TLS client/server secure session
 v0.4.0  Resumable secure transfer
 v0.5.0  Keyed Reversible Permutation
-v1.0.0  Frozen public API + lossless PNG carrier + CLI + demos/docs
+v1.0.0  Stable public API + lossless PNG carrier + CLI + demos/docs
+v1.0.1  CI/coverage/security/fuzzing/release-engineering hardening
 ```
 
 ## Security boundary
@@ -317,7 +386,10 @@ UBIN uses established primitives rather than inventing a cipher. KRP is a layout
 
 - [`docs/API.md`](docs/API.md) — public Python/CLI API
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — system/data-flow design
-- [`docs/SECURITY.md`](docs/SECURITY.md) — security properties and limits
+- [`docs/SECURITY.md`](docs/SECURITY.md) — threat model, trust boundaries, security properties and limits
+- [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md) — KRP, AEAD, nonce, and resume tradeoffs
+- [`docs/RELEASING.md`](docs/RELEASING.md) — PyPI Trusted Publishing and release checklist
+- [`fuzz/README.md`](fuzz/README.md) — coverage-guided fuzzing targets
 - [`CHANGELOG.md`](CHANGELOG.md) — version history
 
 ## License

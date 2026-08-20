@@ -47,7 +47,7 @@ def test_wrong_key_is_rejected_and_no_output_is_published(tmp_path: Path):
     restored = tmp_path / "restored.bin"
     source.write_bytes(os.urandom(5000))
 
-    receipt = ubin.secure(source).save(secure_path)
+    ubin.secure(source).save(secure_path)
     wrong_key = ubin.secure(source).key
 
     with pytest.raises(UbinAuthenticationError):

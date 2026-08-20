@@ -8,7 +8,6 @@ import secrets
 import socket
 import ssl
 import tempfile
-import threading
 from typing import Optional
 
 from cryptography.exceptions import InvalidTag

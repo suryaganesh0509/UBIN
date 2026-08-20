@@ -1,0 +1,35 @@
+name: Bug report
+description: Report a reproducible UBIN defect
+title: "[bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Please do not include secrets, private keys, passphrases, or sensitive files.
+  - type: input
+    id: version
+    attributes:
+      label: UBIN version
+      placeholder: 1.0.1
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version and OS
+      placeholder: Python 3.12.10 / macOS 15
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Include the smallest safe code sample that reproduces the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual behavior
+    validations:
+      required: true

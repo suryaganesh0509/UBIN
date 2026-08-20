@@ -21,11 +21,10 @@ from .format import (
     frame_aad,
     frame_nonce,
 )
-from ..core import DEFAULT_BLOCK_SIZE, UbinObject
+from ..core import UbinObject
 from ..errors import (
     UbinAuthenticationError,
     UbinCorruptionError,
-    UbinInvalidHeader,
     UbinOutputExists,
 )
 

@@ -1,0 +1,100 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-build:
+    name: Verify release and build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install release tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip install build twine
+
+      - name: Verify release tag matches package version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python - <<'PY'
+          import os
+          import tomllib
+          from pathlib import Path
+
+          tag = os.environ["RELEASE_TAG"]
+          version = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+          expected = f"v{version}"
+          if tag != expected:
+              raise SystemExit(f"Release tag {tag!r} does not match package version {version!r} (expected {expected!r})")
+          print(f"Release tag/version match: {tag}")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+              env_file.write(f"PACKAGE_VERSION={version}\n")
+          PY
+
+      - name: Run full release test suite
+        run: python -m pytest -q
+
+      - name: Run coverage release gate
+        run: >-
+          python -m pytest -q
+          --cov=ubin
+          --cov-report=term-missing
+          --cov-fail-under=82
+
+      - name: Build and verify distributions
+        run: |
+          rm -rf dist build
+          python -m build
+          python -m twine check dist/*
+
+      - name: Verify wheel version in a clean environment
+        shell: bash
+        run: |
+          python -m venv /tmp/ubin-release-wheel-test
+          /tmp/ubin-release-wheel-test/bin/python -m pip install --upgrade pip
+          /tmp/ubin-release-wheel-test/bin/python -m pip install dist/*.whl
+          /tmp/ubin-release-wheel-test/bin/python -c "import os, ubin; assert ubin.__version__ == os.environ['PACKAGE_VERSION']; print('UBIN release wheel OK:', ubin.__version__)"
+          /tmp/ubin-release-wheel-test/bin/ubin --version
+
+      - name: Upload verified distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dists
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish verified distributions
+    needs: verify-build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/ubin/
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download verified distributions
+        uses: actions/download-artifact@v5
+        with:
+          name: release-dists
+          path: dist/
+
+      - name: Publish with PyPI Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1

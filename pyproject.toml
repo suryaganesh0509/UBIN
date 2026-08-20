@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ubin"
-version = "1.0.0"
+version = "1.0.1"
 description = "UBIN: universal binary access, authenticated security, resumable transfer, KRP, and lossless PNG carriers."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,10 +12,36 @@ license = "MIT"
 authors = [
   {name = "UBIN Project"}
 ]
+keywords = ["binary", "security", "encryption", "transfer", "png", "streaming"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Security :: Cryptography",
+  "Topic :: System :: Networking",
+]
 dependencies = ["cryptography>=42"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "build>=1.2"]
+dev = [
+  "pytest>=8",
+  "pytest-cov>=6",
+  "hypothesis>=6.130",
+  "build>=1.2",
+  "twine>=6",
+  "ruff>=0.12",
+]
+security = [
+  "bandit>=1.8",
+  "pip-audit>=2.9",
+]
+fuzz = [
+  "atheris>=2.3; platform_system == 'Linux' and python_version < '3.14'",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -29,6 +55,31 @@ ubin = "ubin.cli:main"
 
 [project.urls]
 Repository = "https://github.com/suryaganesh0509/UBIN"
+Documentation = "https://github.com/suryaganesh0509/UBIN/tree/main/docs"
+Issues = "https://github.com/suryaganesh0509/UBIN/issues"
+Changelog = "https://github.com/suryaganesh0509/UBIN/blob/main/CHANGELOG.md"
 
 [tool.setuptools.package-data]
 ubin = ["py.typed"]
+
+[tool.coverage.run]
+branch = false
+source = ["ubin"]
+omit = ["src/ubin/demo.py", "src/ubin/cli.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+precision = 1
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
