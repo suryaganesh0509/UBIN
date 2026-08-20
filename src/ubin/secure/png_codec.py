@@ -165,6 +165,9 @@ def decode_png_to_file(png_path, payload_path) -> PngInfo:
             seen_iend = False
 
             with os.fdopen(filtered_fd, "wb", buffering=0) as filtered:
+                # os.fdopen() now owns the descriptor.
+                # Clear our raw reference so cleanup never double-closes it.
+                filtered_fd = None
                 while not seen_iend:
                     chunk_type, data = _read_chunk(f)
                     if chunk_type == b"IDAT":
@@ -231,11 +234,28 @@ def decode_png_to_file(png_path, payload_path) -> PngInfo:
     except zlib.error as exc:
         raise UbinCarrierError("invalid PNG compressed stream") from exc
     finally:
-        filtered_path.unlink(missing_ok=True)
+        # A malformed PNG can fail before os.fdopen() takes ownership of
+        # filtered_fd. Windows does not allow an open file to be unlinked,
+        # so close every descriptor still owned here before cleanup.
+        if filtered_fd is not None:
+            try:
+                os.close(filtered_fd)
+            except OSError:
+                pass
+
         if out_fd is not None:
             try:
                 os.close(out_fd)
             except OSError:
                 pass
+
+        try:
+            filtered_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
         if temp_path is not None:
-            temp_path.unlink(missing_ok=True)
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                pass

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.2
+
+Windows portability patch release.
+
+- Fixed malformed-PNG temporary-file cleanup on Windows.
+- Close temporary file descriptors before unlinking temporary files.
+- Prevent Windows PermissionError from masking UbinCarrierError.
+- Added a regression test simulating Windows open-file unlink behavior.
+- Validation increased to 115 automated tests.
+- No intentional public API or wire-format changes.
+
 ## 1.0.1
 
 Credibility, assurance, and release-engineering update. No intentional breaking changes to the v1 public API.

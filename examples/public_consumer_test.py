@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-UBIN v1.0.1 public-consumer integration test.
+UBIN v1.0.2 public-consumer integration test.
 
 Normal public usage after PyPI publication:
     python3 -m pip install ubin
     python3 examples/public_consumer_test.py
 
 Right now, before the PyPI release exists, install the tagged GitHub release:
-    python3 -m pip install "git+https://github.com/suryaganesh0509/UBIN.git@v1.0.1"
+    python3 -m pip install "git+https://github.com/suryaganesh0509/UBIN.git@v1.0.2"
 
 Optional one-command bootstrap:
     python3 examples/public_consumer_test.py --install
 
-`--install` installs the exact v1.0.1 GitHub tag only when UBIN is missing.
+`--install` installs the exact v1.0.2 GitHub tag only when UBIN is missing.
 
 This is a consumer-facing integration/smoke test. It exercises every major
 public feature in one file. It is not a replacement for UBIN's internal
@@ -34,9 +34,9 @@ import threading
 
 
 GITHUB_V1 = (
-    "git+https://github.com/suryaganesh0509/UBIN.git@v1.0.1"
+    "git+https://github.com/suryaganesh0509/UBIN.git@v1.0.2"
 )
-EXPECTED_VERSION = "1.0.1"
+EXPECTED_VERSION = "1.0.2"
 
 
 def load_ubin(auto_install: bool):
@@ -46,10 +46,10 @@ def load_ubin(auto_install: bool):
     except ModuleNotFoundError:
         if not auto_install:
             print("\nUBIN is not installed in this Python interpreter.")
-            print("Install v1.0.1 from GitHub:")
+            print("Install v1.0.2 from GitHub:")
             print(
                 '  python3 -m pip install '
-                '"git+https://github.com/suryaganesh0509/UBIN.git@v1.0.1"'
+                '"git+https://github.com/suryaganesh0509/UBIN.git@v1.0.2"'
             )
             print("\nAfter the PyPI release is published, users can use:")
             print("  python3 -m pip install ubin")
@@ -57,7 +57,7 @@ def load_ubin(auto_install: bool):
             print("  python3 examples/public_consumer_test.py --install")
             raise SystemExit(2)
 
-        print("UBIN is missing. Installing tagged UBIN v1.0.1 from GitHub...")
+        print("UBIN is missing. Installing tagged UBIN v1.0.2 from GitHub...")
         subprocess.check_call(
             [sys.executable, "-m", "pip", "install", GITHUB_V1]
         )
@@ -66,12 +66,12 @@ def load_ubin(auto_install: bool):
 
 
 parser = argparse.ArgumentParser(
-    description="Run UBIN v1.0.1 public-consumer integration tests."
+    description="Run UBIN v1.0.2 public-consumer integration tests."
 )
 parser.add_argument(
     "--install",
     action="store_true",
-    help="Install the tagged UBIN v1.0.1 GitHub release if UBIN is missing.",
+    help="Install the tagged UBIN v1.0.2 GitHub release if UBIN is missing.",
 )
 args = parser.parse_args()
 
@@ -112,7 +112,7 @@ def run_server_once(server, result: dict) -> None:
 
 
 print("=" * 72)
-print("UBIN v1.0.1 PUBLIC-CONSUMER INTEGRATION TEST")
+print("UBIN v1.0.2 PUBLIC-CONSUMER INTEGRATION TEST")
 print("=" * 72)
 print("Python:", sys.version.split()[0])
 print("UBIN:", ubin.__version__)
@@ -124,7 +124,7 @@ print()
 print("1) IMPORT / PACKAGE")
 check("import ubin", True)
 check(
-    "UBIN version is 1.0.1",
+    "UBIN version is 1.0.2",
     ubin.__version__ == EXPECTED_VERSION,
     ubin.__version__,
 )
@@ -453,8 +453,8 @@ cli = subprocess.run(
 )
 check("CLI exits successfully", cli.returncode == 0, cli.stderr.strip())
 check(
-    "CLI reports UBIN 1.0.1",
-    "1.0.1" in cli.stdout,
+    "CLI reports UBIN 1.0.2",
+    "1.0.2" in cli.stdout,
     cli.stdout.strip(),
 )
 print()
@@ -466,4 +466,4 @@ print("=" * 72)
 if FAIL:
     raise SystemExit(1)
 
-print("ALL PUBLIC-CONSUMER UBIN v1.0.1 INTEGRATION CHECKS PASSED.")
+print("ALL PUBLIC-CONSUMER UBIN v1.0.2 INTEGRATION CHECKS PASSED.")

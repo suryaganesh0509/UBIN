@@ -1,7 +1,11 @@
 from pathlib import Path
 import os
 
+import pytest
+
 import ubin
+from ubin.errors import UbinCarrierError
+from ubin.secure import png_codec
 from ubin.secure.krp import permute_file, restore_file
 
 
@@ -32,3 +36,56 @@ def test_krp_file_fallback_without_pread_or_pwrite(tmp_path: Path, monkeypatch):
     restore_file(permuted, restored, key, context=context, block_size=257)
 
     assert restored.read_bytes() == payload
+
+
+
+def test_png_error_cleanup_closes_fd_before_windows_style_unlink(
+    tmp_path: Path,
+    monkeypatch,
+):
+    """Malformed PNG cleanup must close temp FDs before unlinking."""
+    candidate = tmp_path / "not-a-png.bin"
+    output = tmp_path / "pixels.bin"
+    candidate.write_bytes(b"definitely not a PNG")
+
+    real_mkstemp = png_codec.tempfile.mkstemp
+    real_unlink = Path.unlink
+    tracked_fds: list[int] = []
+
+    def tracking_mkstemp(*args, **kwargs):
+        fd, name = real_mkstemp(*args, **kwargs)
+        tracked_fds.append(fd)
+        return fd, name
+
+    def windows_style_unlink(path_obj, *args, **kwargs):
+        for fd in tracked_fds:
+            try:
+                os.fstat(fd)
+            except OSError:
+                continue
+
+            raise PermissionError(
+                "simulated Windows: cannot unlink an open file"
+            )
+
+        return real_unlink(path_obj, *args, **kwargs)
+
+    monkeypatch.setattr(
+        png_codec.tempfile,
+        "mkstemp",
+        tracking_mkstemp,
+    )
+    monkeypatch.setattr(
+        Path,
+        "unlink",
+        windows_style_unlink,
+    )
+
+    with pytest.raises(UbinCarrierError):
+        png_codec.decode_png_to_file(candidate, output)
+
+    assert not output.exists()
+
+    for fd in tracked_fds:
+        with pytest.raises(OSError):
+            os.fstat(fd)

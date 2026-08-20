@@ -1,4 +1,4 @@
-# UBIN v1.0.1 — Universal Binary
+# UBIN v1.0.2 — Universal Binary
 
 [![CI](https://github.com/suryaganesh0509/UBIN/actions/workflows/ci.yml/badge.svg)](https://github.com/suryaganesh0509/UBIN/actions/workflows/ci.yml)
 [![Security](https://github.com/suryaganesh0509/UBIN/actions/workflows/security.yml/badge.svg)](https://github.com/suryaganesh0509/UBIN/actions/workflows/security.yml)
@@ -43,9 +43,9 @@ UBIN is a Python reference implementation of a simple idea: applications should 
 
 Unknown format **does not** mean unsupported input.
 
-## v1.0.1 compatibility promise
+## v1.0.2 compatibility promise
 
-v1.0.1 is an assurance and release-engineering hardening release. It intentionally preserves the public v1.0.0 API and wire/container behavior; the new work is CI, coverage, security scanning, fuzz/property testing, packaging/release automation, portability verification, and documentation.
+v1.0.2 is a backward-compatible portability patch release built on the v1.0.1 assurance and release-engineering hardening work. It intentionally preserves the public v1.0.0 API and wire/container behavior; the new work is CI, coverage, security scanning, fuzz/property testing, packaging/release automation, portability verification, and documentation.
 
 ## Stable v1 feature set
 
@@ -69,7 +69,7 @@ v1.0.1 is an assurance and release-engineering hardening release. It intentional
 
 ## Install
 
-Public install after the PyPI v1.0.1 release is published:
+Public install after the PyPI v1.0.2 release is published:
 
 ```bash
 python3 -m pip install ubin
@@ -78,7 +78,7 @@ python3 -m pip install ubin
 Until the PyPI release is visible, install the exact public GitHub tag:
 
 ```bash
-python3 -m pip install "git+https://github.com/suryaganesh0509/UBIN.git@v1.0.1"
+python3 -m pip install "git+https://github.com/suryaganesh0509/UBIN.git@v1.0.2"
 ```
 
 For repository development:
@@ -99,7 +99,7 @@ python -c "import ubin; print(ubin.__version__)"
 Expected:
 
 ```text
-1.0.1
+1.0.2
 ```
 
 UBIN intentionally does **not** require NumPy. Raw file/byte handling does not need it, and avoiding a mandatory NumPy dependency keeps installation and memory overhead lower. The runtime dependency required by the security implementation is declared in `pyproject.toml` and is installed automatically.
@@ -327,7 +327,7 @@ If UBIN is not installed yet, the example has an explicit opt-in bootstrap mode 
 python examples/public_consumer_test.py --install
 ```
 
-The v1.0.1 suite includes **110 deterministic regression/mutation cases plus 4 Hypothesis property tests (114 pytest cases when the `dev` extra is installed)**. CI runs the suite across Linux, macOS, and Windows on supported Python versions 3.10-3.14. Core-library line coverage is enforced at 82% and measured at 84%+ in the release validation environment; coverage is uploaded to Codecov. Security CI runs Ruff, Bandit, Semgrep CE, and `pip-audit`; a separate scheduled workflow runs bounded Atheris fuzz-smoke campaigns.
+The v1.0.1 suite includes **111 deterministic regression/mutation cases plus 4 Hypothesis property tests (115 pytest cases when the `dev` extra is installed)**. CI runs the suite across Linux, macOS, and Windows on supported Python versions 3.10-3.14. Core-library line coverage is enforced at 82% and measured at 84%+ in the release validation environment; coverage is uploaded to Codecov. Security CI runs Ruff, Bandit, Semgrep CE, and `pip-audit`; a separate scheduled workflow runs bounded Atheris fuzz-smoke campaigns.
 
 The suite includes:
 
