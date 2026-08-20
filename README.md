@@ -1,133 +1,39 @@
-# UBIN-PY 0.4 — Interruption-Safe Resumable Transfer
+# UBIN-PY 0.5 — Keyed Reversible Permutation (KRP)
 
-UBIN v0.4 keeps every feature from v0.1, v0.2, and v0.3, then adds
-authenticated interruption recovery for large network transfers.
+UBIN v0.5 keeps every feature from v0.1 through v0.4 and adds an optional
+**Keyed Reversible Permutation (KRP)** layout layer for authenticated encrypted
+network frames.
 
 ## Version progression
 
 ```text
-v0.1  Universal binary access
-v0.2  Local authenticated secure container
+v0.1  Universal lazy binary access
+v0.2  Local AES-256-GCM secure container
 v0.3  TLS 1.3 client/server secure transfer
-v0.4  Durable resumable secure transfer
+v0.4  Durable interruption-safe resume
+v0.5  Keyed reversible ciphertext layout (KRP)
 ```
 
-## Main v0.4 API
+## Why v0.5 exists
 
-The v0.3 one-shot path remains unchanged:
+KRP is preparation for later lossless carrier formats such as the planned PNG
+carrier. It gives UBIN a deterministic, secret-derived and reversible way to
+rearrange encrypted frame blocks **before** carrier integration is introduced.
 
-```python
-ubin.secure("anything.bin").send(
-    "server.example",
-    port=9443,
-    cafile="trusted-ca.pem",
-)
-```
+KRP is **not a new cipher** and is not claimed as additional cryptographic
+strength. Security continues to come from:
 
-Enable v0.4 resume explicitly:
+- TLS 1.3 transport protection and server authentication
+- ephemeral X25519 session establishment
+- HKDF-SHA256 key derivation
+- AES-256-GCM authenticated encryption
+- SHA-256 exact-restoration verification
 
-```python
-ubin.secure("anything.bin").send(
-    "server.example",
-    port=9443,
-    cafile="trusted-ca.pem",
-    resume=True,
-)
-```
+KRP only changes ciphertext layout.
 
-The developer still does not copy or pass a raw AES key.
+## API
 
-## What happens on the first resumable attempt
-
-```text
-source
-  ↓
-bounded-memory SHA-256 source identity
-  ↓
-TLS 1.3 + server certificate verification
-  ↓
-ephemeral X25519 session
-  ↓
-HKDF-SHA256 per-transfer AES-256 key
-  ↓
-UBT4 resumable transfer header
-  ↓
-server issues opaque HMAC resume ticket
-  ↓
-AES-256-GCM frames
-  ↓
-authenticate frame
-  ↓
-write plaintext to hidden partial file
-  ↓
-fsync partial file
-  ↓
-atomically advance durable checkpoint
-```
-
-The checkpoint is moved forward **only after** the frame authenticates and
-the plaintext is durably written.
-
-## What happens after a disconnect
-
-The client keeps an opaque resume ticket in its local resume state. The
-server keeps only transfer metadata, its hidden partial file, and a
-server-side secret used to authenticate tickets.
-
-On reconnect:
-
-```text
-new TLS 1.3 connection
-  ↓
-new ephemeral X25519 session
-  ↓
-new AES-256 transfer key
-  ↓
-client presents transfer ID + opaque resume ticket
-  ↓
-server verifies ticket + stored metadata
-  ↓
-server returns last durable frame
-  ↓
-client starts at that frame
-  ↓
-only remaining frames cross the network
-```
-
-UBIN does **not** persist the old AES transfer key. Every reconnect gets a
-fresh TLS/X25519 session and a fresh application transfer key.
-
-## Source-change protection
-
-A resumable attempt performs a bounded-memory SHA-256 pass before transfer.
-That digest identifies the exact source content. If the source changes
-between attempts, UBIN rejects the resume before sending more data.
-
-This is an intentional correctness tradeoff: resume saves retransmitting
-already-delivered bytes over the network, while strong source identity
-requires a local hash scan.
-
-## Resume authorization
-
-The server generates an HMAC-SHA256 resume ticket bound to:
-
-- transfer ID
-- source SHA-256
-- original size
-- frame size
-- frame count
-- filename
-
-The client stores the ticket as an opaque bearer credential. It is not an
-AES encryption key.
-
-Default client state location:
-
-```text
-~/.ubin/resume/
-```
-
-A custom local state directory can be supplied:
+The existing v0.4 resumable path is unchanged:
 
 ```python
 ubin.secure("large.bin").send(
@@ -135,98 +41,168 @@ ubin.secure("large.bin").send(
     port=9443,
     cafile="trusted-ca.pem",
     resume=True,
-    state_dir="/private/state",
 )
 ```
 
-Client state is deleted automatically after success.
+Enable v0.5 KRP explicitly:
 
-Server resume state defaults to:
-
-```text
-<output_dir>/.ubin-resume/
+```python
+ubin.secure("large.bin").send(
+    "server.example",
+    port=9443,
+    cafile="trusted-ca.pem",
+    resume=True,
+    permutation=True,
+)
 ```
 
-The server secret is created with restrictive file permissions where the OS
-supports them. Production deployments must protect this directory like
-other application secrets.
+KRP is optional so applications that prioritize raw throughput can retain the
+v0.3/v0.4 paths without permutation overhead.
 
-## Final publication rule
+## v0.5 data flow
 
-The receiver never publishes the hidden partial file merely because all
-frames arrived.
+```text
+source bytes
+   ↓
+frame
+   ↓
+AES-256-GCM
+   ↓
+authenticated ciphertext
+   ↓
+KRP using separate HKDF-derived Kperm
+   ↓
+permuted ciphertext layout
+   ↓
+TLS 1.3 transport
+   ↓
+receiver derives same Kperm
+   ↓
+reverse KRP
+   ↓
+original authenticated ciphertext
+   ↓
+AES-GCM authenticate + decrypt
+   ↓
+checkpoint / final SHA-256 verification
+```
 
-Before `os.replace()` publishes the final destination, UBIN:
+The AES key and KRP key are separate derived keys. Neither raw key is returned
+in the network receipt.
 
-1. authenticates the final AES-GCM record,
-2. verifies the sender's expected SHA-256,
-3. re-hashes the complete partial file,
-4. compares it to the source SHA-256,
-5. only then atomically publishes the file.
+## KRP design
 
-A corrupted checkpointed prefix therefore cannot silently become a final
-file.
+The reference implementation operates on complete fixed-size ciphertext blocks
+(default: 4096 bytes). A short trailing block remains in its original position.
 
-## Server restart
+For every frame, UBIN derives a context from:
 
-Resume metadata and the server HMAC secret are persisted in the server
-resume-state directory. A new `SecureServer` instance using the same output
-directory can continue a previously interrupted transfer.
+- transfer ID
+- per-connection nonce base
+- frame number
+
+A keyed 6-round Feistel permutation maps block positions. Cycle walking maps the
+power-of-two Feistel domain back into the exact number of complete blocks.
+
+Properties:
+
+- exact reversible mapping
+- no permutation table stored on disk
+- no sequence table transmitted over the network
+- same-length input and output (zero KRP size expansion)
+- bounded frame memory
+- different frame/transfer context produces a different layout
+- KRP output is reversed before AES-GCM authentication
+
+A malicious or corrupted permuted frame does not bypass authentication: after
+reverse KRP, AES-GCM rejects modified ciphertext/tag bytes.
+
+## Resume compatibility
+
+KRP is integrated with v0.4 durable resume.
+
+If a transfer stops after frame 3:
+
+```text
+frames 0 1 2  → authenticated, written, fsynced, checkpointed
+frame 3       → connection fails
+```
+
+On reconnect, UBIN creates a fresh TLS/X25519 session and therefore fresh AES
+and KRP keys for that connection. The server returns the durable frame
+checkpoint and the client sends only the remaining frames. Already checkpointed
+plaintext does not need the old KRP key.
+
+KRP resume state has a distinct v0.5 profile and cannot be confused with a v0.4
+resume state.
 
 ## Backward compatibility
 
-v0.4 keeps:
+v0.5 retains:
 
-- `ubin.open(...)`
-- v0.2 local `.ubs` secure containers
-- v0.3 non-resumable client/server transfer
+- `ubin.open(...)` from v0.1
+- local `.ubs` containers from v0.2
+- `resume=False` network transfer from v0.3
+- `resume=True, permutation=False` from v0.4
 
-`resume=False` remains the v0.3 behavior.
+The v0.5 KRP protocol is selected only by:
 
-## Local demo
-
-```bash
-python manual_resume_demo.py
+```python
+resume=True, permutation=True
 ```
 
-Important expected lines:
-
-```text
-FIRST ATTEMPT INTERRUPTED: True
-RESUMED FROM FRAME: 3
-TLS: TLSv1.3
-NO MANUAL KEY: True
-MATCH: True
-CLIENT RESUME STATE CLEANED: True
-```
-
-## Tests
+## Local test
 
 ```bash
 pytest -q
 ```
 
-Expected:
+Expected for this build:
 
 ```text
-40 passed
+51 passed
 ```
 
-The suite contains all 32 v0.1-v0.3 tests plus v0.4 tests for:
+The suite includes all v0.1-v0.4 regression tests plus v0.5 checks for:
 
-- durable interruption + resume
-- exact SHA-256 after resume
-- source changed between attempts
-- tampered resume ticket
-- corrupted checkpointed prefix
-- server restart recovery
-- v0.3 network compatibility
-- no raw key exposed in resumable receipt
+- exact KRP round-trip across edge sizes
+- zero size expansion
+- deterministic mapping for identical context
+- context-bound mapping differences
+- tampered KRP ciphertext still failing AES-GCM
+- exact KRP client/server transfer
+- interruption + KRP resume
+- no raw KRP key exposed
+- v0.4 resume compatibility
+- controlled rejection of invalid KRP API combinations
 
-## v0.4 scope boundary
+## Manual KRP/resume demo
 
-v0.4 is about correctness and durable resume.
+```bash
+python manual_krp_demo.py
+```
 
-Later versions can optimize checkpoint throughput, add multi-file sessions,
-parallel lanes, congestion-aware scheduling, Merkle/chunk verification,
-optional image carriers, and broader protocol hardening.
+Important expected lines:
+
+```text
+KRP LAYOUT: krp
+FIRST ATTEMPT INTERRUPTED: True
+RESUMED FROM FRAME: 3
+FRAMES SENT ON RESUME: 4
+TOTAL FRAMES: 7
+TLS: TLSv1.3
+NO MANUAL KEY: True
+NO KRP KEY EXPOSED: True
+MATCH: True
+CLIENT RESUME STATE CLEANED: True
+FINAL FILE PUBLISHED: True
+```
+
+## v0.5 scope boundary
+
+v0.5 establishes and validates the reversible ciphertext-layout layer. It does
+**not** create an image carrier yet.
+
+The planned next step is v0.6: a lossless carrier format (initially PNG) that
+uses KRP output as payload while preserving exact recovery. Carrier encoding
+must not resize, blend, JPEG-compress, or otherwise mutate ciphertext bytes.

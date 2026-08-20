@@ -10,7 +10,7 @@ from .errors import (
     UbinPermissionDenied,
 )
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 
 def open(source) -> UbinObject:
@@ -54,6 +54,9 @@ def secure(source, *, key=None) -> SecureSource:
 
     Resumable network v0.4:
         ubin.secure("file.bin").send(..., resume=True)
+
+    KRP layout v0.5:
+        ubin.secure("file.bin").send(..., resume=True, permutation=True)
     """
     return SecureSource(source, key=key)
 
@@ -83,7 +86,7 @@ def secure_server(
     client_ca=None,
     resume_state_dir=None,
 ):
-    """Create a UBIN Secure server supporting v0.3 and resumable v0.4 transfers."""
+    """Create a UBIN Secure server supporting v0.3-v0.5 transfer modes."""
     return SecureServer(
         host=host,
         port=port,

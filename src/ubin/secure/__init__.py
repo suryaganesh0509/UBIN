@@ -45,3 +45,28 @@ __all__ += [
     "ResumableReceiveReceipt",
     "send_resumable_file",
 ]
+
+
+from .krp import (
+    DEFAULT_KRP_BLOCK_SIZE,
+    UbinPermutationError,
+    frame_context,
+    permute_blocks,
+    restore_blocks,
+)
+from .krp_transfer import (
+    KrpReceiveReceipt,
+    KrpSendReceipt,
+    send_krp_resumable_file,
+)
+
+__all__ += [
+    "DEFAULT_KRP_BLOCK_SIZE",
+    "UbinPermutationError",
+    "permute_blocks",
+    "restore_blocks",
+    "frame_context",
+    "KrpSendReceipt",
+    "KrpReceiveReceipt",
+    "send_krp_resumable_file",
+]

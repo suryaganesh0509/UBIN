@@ -93,3 +93,18 @@ def derive_transfer_key(session_key: bytes, transfer_id: bytes) -> bytes:
         salt=transfer_id,
         info=b"UBIN-Secure-v0.3/file-transfer-key",
     ).derive(session_key)
+
+
+def derive_permutation_key(session_key: bytes, transfer_id: bytes) -> bytes:
+    """Derive a key dedicated to the v0.5 KRP layout layer."""
+    if len(session_key) != SESSION_KEY_SIZE:
+        raise UbinHandshakeError("invalid UBIN session key length")
+    if len(transfer_id) != 16:
+        raise UbinHandshakeError("invalid UBIN transfer id length")
+
+    return HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=transfer_id,
+        info=b"UBIN-Secure-v0.5/krp-layout-key",
+    ).derive(session_key)

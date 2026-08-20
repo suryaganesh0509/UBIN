@@ -468,6 +468,18 @@ class SecureServer:
                 first_magic,
             )
 
+        if first_magic == b"UBT5":
+            from .krp_transfer import receive_krp_after_magic
+
+            return receive_krp_after_magic(
+                self,
+                tls_sock,
+                tls_version,
+                session_key,
+                session_id,
+                first_magic,
+            )
+
         raise UbinProtocolError("unsupported UBIN network transfer magic")
 
     def _receive_v03_after_magic(

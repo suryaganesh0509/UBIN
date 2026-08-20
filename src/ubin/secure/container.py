@@ -92,6 +92,7 @@ class SecureSource:
         certfile=None,
         keyfile=None,
         resume: bool = False,
+        permutation: bool = False,
         state_dir=None,
     ):
         """
@@ -107,8 +108,33 @@ class SecureSource:
             frames on the server, and continue from the last durable frame
             after a disconnect.
 
-        No raw AES transfer key is exposed to the developer in either path.
+        v0.5 path:
+            resume=True, permutation=True
+            Apply KRP to already-encrypted frame ciphertext before transport.
+            The receiver reverses KRP before AES-GCM authentication/decryption.
+
+        KRP is a reversible layout layer, not a replacement for TLS/AES-GCM.
+        No raw AES or KRP key is exposed to the developer.
         """
+        if permutation and not resume:
+            raise ValueError("v0.5 permutation currently requires resume=True")
+
+        if permutation:
+            from .krp_transfer import send_krp_resumable_file
+
+            return send_krp_resumable_file(
+                self._source,
+                host,
+                port=port,
+                cafile=cafile,
+                server_hostname=server_hostname,
+                frame_size=frame_size,
+                timeout=timeout,
+                certfile=certfile,
+                keyfile=keyfile,
+                state_dir=state_dir,
+            )
+
         if resume:
             from .resume import send_resumable_file
 
