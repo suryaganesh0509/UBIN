@@ -5,8 +5,12 @@ import os
 from pathlib import Path
 import platform
 import tempfile
-import tomllib
 from typing import Any
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
 
 
 def _atomic_text(path: Path, text: str) -> None:
