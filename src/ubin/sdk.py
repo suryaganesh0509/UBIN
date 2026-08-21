@@ -24,8 +24,8 @@ class CapabilityManifest:
     version: str
     description: str = ""
     api_version: str = "1"
-    min_ubin: str = "1.0.7"
-    max_ubin_exclusive: str = "2.0.0"
+    min_ubin: str = "2.0.0"
+    max_ubin_exclusive: str = "3.0.0"
     permissions: PermissionManifest = PermissionManifest()
 
     def validate(self) -> "CapabilityManifest":

@@ -57,7 +57,7 @@ def _print_receipt(receipt) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ubin",
-        description="UBIN v1.0.7 — universal runtime candidate",
+        description="UBIN v2.0.0 — recommended stable universal runtime",
     )
     parser.add_argument("--version", action="version", version=f"UBIN {ubin.__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -115,7 +115,7 @@ def build_parser() -> argparse.ArgumentParser:
     lock.add_argument("--output", default="ubin.lock")
     sync = sub.add_parser("sync", help="verify the current environment against ubin.lock")
     sync.add_argument("--lock", default="ubin.lock")
-    sub.add_parser("protocol-vector", help="print UBIN v2-draft conformance vectors")
+    sub.add_parser("protocol-vector", help="print UBIN v2 stable conformance vectors")
 
     add = sub.add_parser("add", help="add or verify a UBIN capability provider")
     add.add_argument("capability")

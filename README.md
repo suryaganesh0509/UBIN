@@ -1,195 +1,109 @@
-# UBIN v1.0.7 — Universal Runtime Candidate
+# UBIN v2.0.0 — Recommended Stable Universal Runtime
 
 > **UBIN handles the bytes. You handle the logic.**
 
-UBIN is a Python reference implementation for working with arbitrary binary data through one consistent interface. It provides lazy binary access, bounded-memory streaming, hashing, authenticated local containers, TLS 1.3 transfer, interruption-safe resume, optional KRP ciphertext layout, and a lossless PNG carrier.
+UBIN 2.0.0 is the recommended stable release of UBIN: a Python reference runtime for arbitrary binary data plus a frozen language-neutral protocol that allows independently implemented C, C++, Java, Python, and other language components to exchange the same canonical values and framed messages.
 
-**v1.0.6 introduces the universal single-import foundation.** Existing binary/security behavior remains available while new capability namespaces are resolved lazily from one normal `import ubin` entry point.
+UBIN keeps the proven v1 binary/security flows while promoting the universal runtime and polyglot protocol to a stable v2 contract.
 
-## Start here
-
-### Install
+## Install
 
 ```bash
-python3 -m pip install ubin
+python3 -m pip install ubin==2.0.0
 ```
 
 Verify:
 
 ```bash
 ubin --version
+# UBIN 2.0.0
 ```
-
-Expected for this release:
-
-```text
-UBIN 1.0.6
-```
-
-Python:
 
 ```python
 import ubin
-print(ubin.__version__)
+assert ubin.__version__ == "2.0.0"
 ```
 
-## 30-second example
+Python 3.10–3.14 is the supported release matrix.
+
+## What UBIN 2 provides
+
+| Area | Stable capability |
+|---|---|
+| Universal binary input | paths, bytes, bytearray, memoryview, seekable binary streams |
+| Bounded processing | positioned reads, streaming, hashing, explicit whole-file guards |
+| Authenticated local storage | framed AES-256-GCM `.ubs` containers |
+| Secure transfer | TLS 1.3 + X25519/HKDF + authenticated frames |
+| Resumability | durable interruption-safe transfer resume |
+| KRP | optional reversible ciphertext layout permutation |
+| PNG carrier | authenticated lossless PNG representation and exact restoration |
+| Universal facade | lazy `ubin.<capability>` namespaces from one import |
+| Runtime/SDK | discovery, providers, manifests, diagnostics, permissions |
+| Reproducibility | `ubin.toml`, lock, sync, runtime checks |
+| Execution composition | resources, pipelines, workflows, async/parallel helpers |
+| Polyglot protocol | stable canonical values + fixed UBIN 2 envelope |
+| Conformance | shared Python/C/C++/Java vectors and CI compilation tests |
+
+## 30-second Python example
 
 ```python
 import ubin
 
 with ubin.open("anything.bin") as obj:
     print(obj.info())
-    print("Size:", obj.size)
-    print("Type:", obj.type)
-    print("SHA-256:", obj.hash())
-
+    print(obj.hash())
     for block in obj.stream():
         process(block)
 ```
 
-UBIN does not require a recognized filename extension. Unknown content remains valid binary input and safely falls back to a generic binary type.
+Unknown filename extensions remain valid binary input; UBIN falls back to generic binary handling instead of rejecting the file.
 
-## What UBIN can do
+## Stable UBIN 2 protocol
 
-| Goal | UBIN entry point |
-|---|---|
-| Open a file, bytes, bytearray, memoryview, or seekable binary stream | `ubin.open(...)` |
-| Read without loading an entire file | `obj.read(...)`, `obj.read_at(...)` |
-| Stream with bounded memory | `obj.stream(...)` |
-| Hash / verify | `obj.hash(...)`, `obj.verify(...)` |
-| Create a local authenticated container | `ubin.secure(...).save(...)` |
-| Restore a local authenticated container | `ubin.decrypt(...)` |
-| Send securely over the network | `ubin.secure(...).send(...)` |
-| Run a reference receive server | `ubin.secure_server(...)` |
-| Create a lossless authenticated PNG carrier | `ubin.to_image(...)` |
-| Restore a PNG carrier | `ubin.from_image(...)` |
-| Linear / binary search | `ubin.search.linear(...)`, `ubin.search.binary(...)` |
-| Sort values | `ubin.sort.values(...)`, `ubin.sort.merge(...)`, `ubin.sort.quick(...)` |
-| Core data structures | `ubin.ds.Stack`, `ubin.ds.Queue`, `ubin.ds.BinaryTree`, `ubin.ds.Graph` |
+Languages communicate through bytes, not through each other's source syntax or object memory layouts.
 
-## Mental model
+```python
+import ubin
+
+message = ubin.protocol.encode_message({
+    "language": "Python",
+    "ok": True,
+    "version": 2,
+})
+
+value = ubin.protocol.decode_message(message)
+```
+
+The same wire format is implemented by the conformance code under:
 
 ```text
-File / bytes / bytearray / memoryview / seekable stream
-                         │
-                         ▼
-                     ubin.open()
-                         │
-          ┌──────────────┼──────────────┐
-          ▼              ▼              ▼
-       inspect        read/seek       stream
-          │              │              │
-          └──────────────┼──────────────┘
-                         ▼
-                     hash/verify
-
-Optional protection paths:
-
-source ──► AES-256-GCM local container ──► exact restore
-
-source ──► TLS 1.3 ──► X25519/HKDF ──► AES-GCM frames
-                                      └─► resume
-                                      └─► optional KRP
-
-source ──► AES-GCM ──► KRP ──► lossless RGBA PNG ──► exact restore
+interop/c/
+interop/cpp/
+interop/java/
+interop/conformance/vectors.json
 ```
 
-## Important guarantees and limits
+The protocol is independent of Python. Any language can interoperate by implementing [`docs/PROTOCOL_V2.md`](docs/PROTOCOL_V2.md) and passing the shared vectors.
 
-- **Unknown extension does not mean unsupported input.**
-- UBIN does not silently read an arbitrary file completely into memory.
-- Full-file work such as hashing, encryption, transfer, KRP, and carrier creation is necessarily **O(n)** in bytes processed.
-- Streaming auxiliary memory is bounded by the chosen block/frame sizes rather than by total file size.
-- AES-256-GCM provides authenticated encryption.
-- TLS 1.3 protects network transport and server authentication.
-- X25519 + HKDF-SHA256 derive fresh application session/transfer material.
-- KRP is a reversible ciphertext-layout transformation. **It is not a replacement for encryption.**
-- Restored output is published only after validation succeeds in the protected flows.
-- The PNG carrier is lossless. Resizing, JPEG conversion, screenshots, color conversion, or image editing are not supported carrier operations.
-- UBIN cannot losslessly compress arbitrary high-entropy or encrypted multi-gigabyte data into a fixed tiny image.
-- Correctness is evaluated by **exact byte equality / cryptographic hash equality**, not a prediction-style “accuracy percentage.”
+## Binary and security examples
 
-## Installation choices
-
-### Normal user
-
-```bash
-python3 -m pip install ubin
-```
-
-### Exact release
-
-```bash
-python3 -m pip install ubin==1.0.7
-```
-
-### Repository development
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e ".[dev,security]"
-```
-
-Windows PowerShell activation:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-## Common examples
-
-### Unknown/custom extension
-
-```python
-import ubin
-
-with ubin.open("archive.futureXYZ") as obj:
-    print(obj.name)
-    print(obj.size)
-    print(obj.type)
-```
-
-### Raw memory
-
-```python
-import ubin
-
-payload = b"hello UBIN"
-with ubin.open(payload, name="packet.bin") as obj:
-    print(obj.hash())
-```
-
-### Exact positioned read
+### Hash without reading the complete file into memory
 
 ```python
 with ubin.open("large.bin") as obj:
-    header = obj.read_at(0, 64)
+    print(obj.hash("sha256"))
 ```
 
-### Local authenticated container
+### Authenticated local container
 
 ```python
-import ubin
-
 receipt = ubin.secure("document.pdf").save("document.ubs")
-
-ubin.decrypt(
-    "document.ubs",
-    "document-restored.pdf",
-    key=receipt.key,
-)
+ubin.decrypt("document.ubs", "document-restored.pdf", key=receipt.key)
 ```
 
-The raw key in the legacy/local container API is for the local save/restore model. Network transfer does not expose the raw transfer key in the public receipt.
-
-### Lossless PNG carrier
+### Authenticated lossless PNG carrier
 
 ```python
-import ubin
-
 packed = ubin.to_image(
     "anything.bin",
     "anything.ubin.png",
@@ -202,15 +116,12 @@ restored = ubin.from_image(
     passphrase="use a long unique passphrase",
 )
 
-print(packed.sha256)
-print(restored.sha256)
+assert packed.sha256 == restored.sha256
 ```
 
-### Network send with resume + KRP
+### Secure resumable network transfer
 
 ```python
-import ubin
-
 receipt = ubin.secure("large.bin").send(
     "server.example",
     port=9443,
@@ -218,115 +129,97 @@ receipt = ubin.secure("large.bin").send(
     resume=True,
     permutation=True,
 )
-
 print(receipt.sha256)
 ```
 
-Production deployments must use real certificate infrastructure. UBIN's localhost certificate helper is for tests/demos only.
+Production deployments must use real certificate infrastructure. Development certificates are for tests/demos only.
+
+## Universal capability facade
+
+```python
+import ubin
+
+index = ubin.search.linear([10, 20, 30], 20)
+ordered = ubin.sort.values([3, 1, 2])
+stack = ubin.ds.Stack()
+```
+
+Discover capabilities without eagerly loading every module:
+
+```bash
+ubin list
+ubin list --json
+ubin doctor
+```
+
+UBIN never silently installs provider packages during normal attribute access. Provider installation is explicit.
 
 ## CLI
 
 ```bash
 ubin --help
+ubin --version
 ubin info anything.bin
 ubin hash anything.bin
-
 ubin secure input.bin input.ubs --key-out input.key
 ubin restore input.ubs restored.bin --key-file input.key
-
 ubin image-pack input.bin input.ubin.png
 ubin image-restore input.ubin.png restored.bin
-
+ubin list
+ubin doctor
+ubin init
+ubin lock
+ubin sync
+ubin protocol-vector
 ubin demo
 ```
 
-For image-carrier automation without writing a passphrase directly in shell history:
+## Correctness and limits
 
-```bash
-export UBIN_PASS='your long unique passphrase'
-ubin image-pack input.bin input.ubin.png --passphrase-env UBIN_PASS
-ubin image-restore input.ubin.png restored.bin --passphrase-env UBIN_PASS
-```
+UBIN 2 deliberately avoids claims that software or information theory cannot guarantee:
 
-## Documentation map
+- correctness means exact byte equality / cryptographic hash equality;
+- streaming work is normally O(n) in processed bytes with bounded auxiliary memory;
+- arbitrary encrypted/high-entropy data cannot be losslessly compressed to an arbitrarily small fixed target;
+- KRP is not encryption and never replaces authenticated encryption;
+- the UBIN protocol is framing/serialization, not authentication or confidentiality;
+- malformed protected data fails closed and validated output is not published prematurely;
+- a stable release means all defined gates pass and there are no known release-blocking defects, not that future defects are mathematically impossible.
 
-- [`docs/README.md`](docs/README.md) — choose the right documentation path
-- [`docs/UBIN_VISION.md`](docs/UBIN_VISION.md) — long-term universal-platform direction
-- [`docs/V1_0_6_UNIVERSAL_FACADE.md`](docs/V1_0_6_UNIVERSAL_FACADE.md) — v1.0.6 facade/capability architecture
-- [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) — first installation and first successful operations
-- [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — practical usage patterns
-- [`docs/HOW_UBIN_WORKS.md`](docs/HOW_UBIN_WORKS.md) — end-to-end explanation
-- [`docs/API.md`](docs/API.md) — public Python API reference
+## Release validation
+
+Before v2.0.0 is published, the release gate requires:
+
+1. full Python regression suite passes;
+2. coverage meets the configured threshold;
+3. Ruff/static/security checks pass;
+4. C/C++ compile with strict warnings and pass conformance vectors;
+5. Java compiles and passes the same vectors;
+6. Python 3.10–3.14 CI passes on Linux, macOS, and Windows;
+7. wheel and sdist build and pass Twine validation;
+8. clean wheel install succeeds outside the repository;
+9. release tag equals package version;
+10. Trusted PyPI publication and fresh public installation are verified.
+
+See [`FINAL_VALIDATION.md`](FINAL_VALIDATION.md) and [`docs/TESTING.md`](docs/TESTING.md).
+
+## Documentation
+
+- [`docs/V2_0_0_STABLE.md`](docs/V2_0_0_STABLE.md) — v2 stable architecture/release principles
+- [`docs/PROTOCOL_V2.md`](docs/PROTOCOL_V2.md) — frozen language-neutral wire specification
+- [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) — installation and first operations
+- [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — practical usage
+- [`docs/API.md`](docs/API.md) — public Python API
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — architecture and data flows
-- [`docs/COMPLEXITY_AND_PERFORMANCE.md`](docs/COMPLEXITY_AND_PERFORMANCE.md) — time/space complexity and benchmarking
-- [`docs/SECURITY.md`](docs/SECURITY.md) — threat model and security boundaries
-- [`docs/TESTING.md`](docs/TESTING.md) — reproduce the release validation
-- [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) — common failures and fixes
-- [`docs/FAQ.md`](docs/FAQ.md) — quick answers
-- [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md) — important design trade-offs
+- [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md) — capability/provider model
+- [`docs/SECURITY.md`](docs/SECURITY.md) — security model and trust boundaries
+- [`docs/COMPLEXITY_AND_PERFORMANCE.md`](docs/COMPLEXITY_AND_PERFORMANCE.md) — complexity and benchmarking
+- [`docs/TESTING.md`](docs/TESTING.md) — validation procedure
 - [`docs/RELEASING.md`](docs/RELEASING.md) — release process
 - [`CHANGELOG.md`](CHANGELOG.md) — version history
 
-## Validation baseline
-
-The v1.0.4 runtime baseline that v1.0.5 documents was independently validated with:
-
-- 116 pytest cases passing
-- coverage above the enforced 82% threshold
-- 46/46 public-consumer integration checks
-- Ruff clean
-- Bandit with no medium/high findings at the configured gate
-- `pip-audit` with no known dependency vulnerabilities at validation time
-- Linux, macOS, and Windows GitHub CI
-- clean wheel/sdist build and installation
-- successful public PyPI installation
-
-These results increase confidence but are not a formal proof, independent security audit, or performance guarantee on every machine.
-
-## Performance
-
-UBIN intentionally does **not** publish a universal “X MB/s” claim because throughput depends on CPU, storage, network, cryptography version, frame size, Python version, and workload.
-
-See [`docs/COMPLEXITY_AND_PERFORMANCE.md`](docs/COMPLEXITY_AND_PERFORMANCE.md) for:
-
-- operation-by-operation complexity
-- bounded-memory expectations
-- reproducible benchmark commands
-- how to report throughput honestly
-
-## Version roadmap
-
-```text
-v1.0.4  release-integrity stable baseline
-v1.0.5  documentation & developer-understanding patch
-v1.0.6  universal single-import capability foundation
-```
-
-The v1.0.6 foundation makes the normal developer entry point:
-
-```python
-import ubin
-```
-
-and should not need to import user-facing functionality from internal UBIN modules.
+Historical v1 architecture documents remain in `docs/` for compatibility context.
 
 ## License
 
 MIT. See [`LICENSE`](LICENSE).
-
-## Capability management
-
-Inspect the universal capability layer without importing heavy providers:
-
-```bash
-ubin list
-ubin list --json
-```
-
-Future provider packages can be added explicitly:
-
-```bash
-ubin add <capability> --package <trusted-provider-package>
-```
-
-Normal application execution never silently installs packages.

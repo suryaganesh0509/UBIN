@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-UBIN v1.0.7 public-consumer integration test.
+UBIN v2.0.0 public-consumer integration test.
 
 Normal public usage after PyPI publication:
     python3 -m pip install ubin
     python3 examples/public_consumer_test.py
 
 Alternative exact-source install from the tagged GitHub release:
-    python3 -m pip install "git+https://github.com/suryaganesh0509/UBIN.git@v1.0.7"
+    python3 -m pip install "git+https://github.com/suryaganesh0509/UBIN.git@v2.0.0"
 
 Optional one-command bootstrap:
     python3 examples/public_consumer_test.py --install
 
-`--install` installs the exact v1.0.7 GitHub tag only when UBIN is missing.
+`--install` installs the exact v2.0.0 GitHub tag only when UBIN is missing.
 
 This is a consumer-facing integration/smoke test. It exercises every major
 public feature in one file. It is not a replacement for UBIN's internal
@@ -34,9 +34,9 @@ import threading
 
 
 GITHUB_V1 = (
-    "git+https://github.com/suryaganesh0509/UBIN.git@v1.0.7"
+    "git+https://github.com/suryaganesh0509/UBIN.git@v2.0.0"
 )
-EXPECTED_VERSION = "1.0.7"
+EXPECTED_VERSION = "2.0.0"
 
 
 def load_ubin(auto_install: bool):
@@ -46,10 +46,10 @@ def load_ubin(auto_install: bool):
     except ModuleNotFoundError:
         if not auto_install:
             print("\nUBIN is not installed in this Python interpreter.")
-            print("Install v1.0.7 from GitHub:")
+            print("Install v2.0.0 from GitHub:")
             print(
                 '  python3 -m pip install '
-                '"git+https://github.com/suryaganesh0509/UBIN.git@v1.0.7"'
+                '"git+https://github.com/suryaganesh0509/UBIN.git@v2.0.0"'
             )
             print("\nNormal PyPI users can use:")
             print("  python3 -m pip install ubin")
@@ -57,7 +57,7 @@ def load_ubin(auto_install: bool):
             print("  python3 examples/public_consumer_test.py --install")
             raise SystemExit(2)
 
-        print("UBIN is missing. Installing tagged UBIN v1.0.7 from GitHub...")
+        print("UBIN is missing. Installing tagged UBIN v2.0.0 from GitHub...")
         subprocess.check_call(
             [sys.executable, "-m", "pip", "install", GITHUB_V1]
         )
@@ -66,19 +66,23 @@ def load_ubin(auto_install: bool):
 
 
 parser = argparse.ArgumentParser(
-    description="Run UBIN v1.0.7 public-consumer integration tests."
+    description="Run UBIN v2.0.0 public-consumer integration tests."
 )
 parser.add_argument(
     "--install",
     action="store_true",
-    help="Install the tagged UBIN v1.0.7 GitHub release if UBIN is missing.",
+    help="Install the tagged UBIN v2.0.0 GitHub release if UBIN is missing.",
 )
 args = parser.parse_args()
 
 ubin = load_ubin(args.install)
 
 # Test-only helper APIs shipped by UBIN for localhost demonstrations.
-from ubin.secure import SecureServer, generate_localhost_certificate
+# Resolve them after optional auto-install so this script still works when UBIN
+# was not installed before launch.
+_secure = importlib.import_module("ubin.secure")
+SecureServer = _secure.SecureServer
+generate_localhost_certificate = _secure.generate_localhost_certificate
 
 
 PASS = 0
@@ -112,7 +116,7 @@ def run_server_once(server, result: dict) -> None:
 
 
 print("=" * 72)
-print("UBIN v1.0.7 PUBLIC-CONSUMER INTEGRATION TEST")
+print("UBIN v2.0.0 PUBLIC-CONSUMER INTEGRATION TEST")
 print("=" * 72)
 print("Python:", sys.version.split()[0])
 print("UBIN:", ubin.__version__)
@@ -124,7 +128,7 @@ print()
 print("1) IMPORT / PACKAGE")
 check("import ubin", True)
 check(
-    "UBIN version is 1.0.7",
+    "UBIN version is 2.0.0",
     ubin.__version__ == EXPECTED_VERSION,
     ubin.__version__,
 )
@@ -453,8 +457,8 @@ cli = subprocess.run(
 )
 check("CLI exits successfully", cli.returncode == 0, cli.stderr.strip())
 check(
-    "CLI reports UBIN 1.0.7",
-    "1.0.7" in cli.stdout,
+    "CLI reports UBIN 2.0.0",
+    "2.0.0" in cli.stdout,
     cli.stdout.strip(),
 )
 print()
@@ -466,4 +470,4 @@ print("=" * 72)
 if FAIL:
     raise SystemExit(1)
 
-print("ALL PUBLIC-CONSUMER UBIN v1.0.7 INTEGRATION CHECKS PASSED.")
+print("ALL PUBLIC-CONSUMER UBIN v2.0.0 INTEGRATION CHECKS PASSED.")

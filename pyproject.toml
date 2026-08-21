@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ubin"
-version = "1.0.7"
-description = "UBIN: universal binary and capability runtime with secure transport and polyglot protocol foundations."
+version = "2.0.0"
+description = "UBIN 2: stable universal binary runtime with secure transport and a language-neutral polyglot protocol."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [
   {name = "UBIN Project"}
 ]
-keywords = ["binary", "security", "encryption", "transfer", "png", "streaming"]
+keywords = ["binary", "protocol", "polyglot", "interoperability", "security", "encryption", "streaming"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Programming Language :: Python :: 3",

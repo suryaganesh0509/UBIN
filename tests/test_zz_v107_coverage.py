@@ -302,7 +302,7 @@ def test_permission_manifest_mapping_and_validation():
 
 
 def test_sdk_validation_error_paths_and_provider_manifest():
-    assert CapabilityManifest("demo", "1.0.0").supports("1.0.7")
+    assert CapabilityManifest("demo", "1.0.0").supports("2.0.0")
 
     with pytest.raises(ValueError, match="invalid capability version"):
         CapabilityManifest("demo", "version").validate()
@@ -481,8 +481,8 @@ def test_runtime_builtin_and_provider_verification_branches(monkeypatch):
         UBIN_CAPABILITY=CapabilityManifest(
             "hello",
             "1.0.0",
-            min_ubin="2.0.0",
-            max_ubin_exclusive="3.0.0",
+            min_ubin="3.0.0",
+            max_ubin_exclusive="4.0.0",
         )
     )
     monkeypatch.setattr(
@@ -508,7 +508,7 @@ def test_diagnostics_deep_and_failure_branches(monkeypatch):
     import ubin.diagnostics as diagnostics
 
     report = diagnostics.doctor(deep=True)
-    assert report.ubin_version == "1.0.7"
+    assert report.ubin_version == "2.0.0"
     assert report.healthy
     payload = report.as_dict()
     assert payload["healthy"]
@@ -559,7 +559,7 @@ def test_environment_error_and_change_detection(tmp_path):
 
     bad_config = tmp_path / "bad.toml"
     bad_config.write_text(
-        '[ubin]\nversion = "1.0.7"\n\n'
+        '[ubin]\nversion = "2.0.0"\n\n'
         '[capabilities]\ndefinitely_missing = "builtin"\n',
         encoding="utf-8",
     )

@@ -1,3 +1,15 @@
+# Changelog
+
+## 2.0.0 — Recommended Stable Universal Runtime
+
+- Promoted UBIN Protocol 2 from draft to a frozen stable language-neutral wire contract.
+- Added stable canonical-value message helpers and hardened parser resource limits.
+- Added first-class C, C++, Java, and Python conformance against shared vectors.
+- Added CI polyglot compilation/execution gate.
+- Centralized release/protocol version constants and set the package to 2.0.0.
+- Retained proven v1 binary, secure container, TLS transfer, resume, KRP, PNG carrier, and public Python compatibility paths.
+- Reworked release/testing/protocol documentation around v2 stable guarantees and explicit non-guarantees.
+
 ## v1.0.7 — Universal Runtime Candidate
 
 - Capability runtime, SDK, diagnostics, permissions, environment lockfiles, resources, pipelines and workflows.
@@ -5,7 +17,6 @@
 - UBIN 2 language-neutral canonical-value and envelope draft with Python/C/C++/Java conformance preview.
 - Existing v1 binary/security/wire behavior remains the compatibility baseline.
 
-# Changelog
 ## 1.0.6
 
 - Added safe capability discovery/management CLI (`ubin list`, explicit `ubin add ... --package ...`).

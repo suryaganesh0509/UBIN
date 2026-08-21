@@ -19,3 +19,5 @@ recursive-include fuzz *.py *.md
 recursive-include benchmarks *.py
 recursive-include interop *
 include LOCAL_TESTING.md
+
+include LOCAL_VALIDATION_V2.md

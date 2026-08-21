@@ -4,6 +4,7 @@ from importlib import import_module
 from typing import TYPE_CHECKING
 
 from .core import UbinInfo, UbinMemoryObject, UbinObject, UbinStreamObject
+from .version import VERSION as __version__, VERSION_INFO as version_info
 from .errors import (
     UbinAuthenticationError,
     UbinCarrierError,
@@ -26,8 +27,6 @@ from .errors import (
     UbinSourceChanged,
     UbinTLSVerificationError,
 )
-
-__version__ = "1.0.7"
 
 # Bundled universal capability namespaces. These modules are intentionally not
 # imported during bare ``import ubin``.
@@ -373,6 +372,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "__version__",
+    "version_info",
     "open",
     "secure",
     "decrypt",

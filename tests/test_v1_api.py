@@ -4,7 +4,7 @@ import ubin
 
 
 def test_final_public_api_symbols():
-    assert ubin.__version__ == "1.0.7"
+    assert ubin.__version__ == "2.0.0"
     for name in ("open", "secure", "decrypt", "secure_server", "to_image", "from_image"):
         assert callable(getattr(ubin, name))
 

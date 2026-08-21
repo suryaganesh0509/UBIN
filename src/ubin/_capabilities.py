@@ -51,7 +51,7 @@ _BUILTINS: dict[str, tuple[str, str]] = {
     "permissions": ('ubin.permissions', 'Capability permission metadata'),
     "plot": ('ubin.plot', 'Dependency-free SVG line plotting plus future provider adapters'),
     "process": ('ubin.process', 'Provider-gated process execution capability'),
-    "protocol": ('ubin.protocol', 'UBIN v2 draft canonical values and wire envelope'),
+    "protocol": ('ubin.protocol', 'UBIN v2 stable canonical values and language-neutral wire envelope'),
     "providers": ('ubin.providers', 'Provider gateway helpers and explicit provider-required errors'),
     "run": ('ubin.run', 'Parallel and asynchronous execution helpers'),
     "runtime": ('ubin.runtime', 'Capability runtime inspection and verification'),

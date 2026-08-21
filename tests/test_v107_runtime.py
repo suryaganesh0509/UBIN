@@ -41,7 +41,7 @@ def test_version_and_lazy_security():
         "import ubin\n"
         "def crypto_loaded():\n"
         "    return any(n == 'cryptography' or n.startswith('cryptography.') for n in sys.modules)\n"
-        "assert ubin.__version__ == '1.0.7'\n"
+        "assert ubin.__version__ == '2.0.0'\n"
         "assert 'ubin.secure' not in sys.modules\n"
         "assert not crypto_loaded()\n"
         "print('PASS')\n"
@@ -139,18 +139,18 @@ def test_environment_init_lock_sync(tmp_path):
     lockfile = tmp_path / "ubin.lock"
     ubin.environment.init(config)
     payload = ubin.environment.read_config(config)
-    assert payload["ubin"]["version"] == "1.0.7"
+    assert payload["ubin"]["version"] == "2.0.0"
     ubin.environment.lock(config, lockfile)
     locked = json.loads(lockfile.read_text())
-    assert locked["ubin"] == "1.0.7"
+    assert locked["ubin"] == "2.0.0"
     assert ubin.environment.sync(lockfile)["ok"]
 
 
 def test_sdk_manifest_validation():
     manifest = CapabilityManifest("hello", "1.2.3")
     assert manifest.validate() is manifest
-    assert manifest.supports("1.0.7")
-    assert not manifest.supports("2.0.0")
+    assert manifest.supports("2.0.0")
+    assert not manifest.supports("3.0.0")
 
 
 def test_sdk_rejects_invalid_name():
@@ -227,7 +227,7 @@ def test_doctor_shallow_does_not_load_security():
         "def crypto_loaded():\n"
         "    return any(n == 'cryptography' or n.startswith('cryptography.') for n in sys.modules)\n"
         "report = ubin.doctor()\n"
-        "assert report.ubin_version == '1.0.7'\n"
+        "assert report.ubin_version == '2.0.0'\n"
         "assert report.healthy\n"
         "assert 'ubin.secure' not in sys.modules\n"
         "assert not crypto_loaded()\n"

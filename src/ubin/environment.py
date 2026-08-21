@@ -7,6 +7,8 @@ import platform
 import tempfile
 from typing import Any
 
+from .version import VERSION
+
 try:
     import tomllib
 except ModuleNotFoundError:  # Python 3.10
@@ -32,7 +34,7 @@ def init(path: str | os.PathLike[str] = "ubin.toml", *, overwrite: bool = False)
     target = Path(path)
     if target.exists() and not overwrite:
         raise FileExistsError(target)
-    text = '[ubin]\nversion = "1.0.7"\n\n[capabilities]\nsearch = "builtin"\nsort = "builtin"\nds = "builtin"\nsecure = "builtin"\n'
+    text = f'[ubin]\nversion = "{VERSION}"\n\n[capabilities]\nsearch = "builtin"\nsort = "builtin"\nds = "builtin"\nsecure = "builtin"\n'
     _atomic_text(target, text)
     return target
 

@@ -1,72 +1,81 @@
-# UBIN v1.0 Architecture
+# UBIN v2.0 Architecture
 
-## Principle
+## Core principle
 
-UBIN separates byte semantics from file-format semantics. A source does not need to be recognized in order to be usable.
+UBIN separates byte semantics, security semantics, capability semantics, and cross-language wire semantics. A source does not need a recognized extension or format to be usable.
 
 ## Layers
 
 ```text
-Application
-  ↓
-UBIN public API
-  ↓
-Universal binary core
-  ├─ filesystem / memory / seekable-stream sources
-  ├─ lazy read/read_at/stream
-  ├─ bounded signature detection
-  └─ streaming hashes
-  ↓
-Security / transport options
-  ├─ local .ubs container
-  ├─ TLS client/server
-  ├─ durable resume
-  ├─ KRP layout
-  └─ PNG carrier
+Application / provider / another language
+                │
+                ├──────── UBIN Protocol 2 ──────── C / C++ / Java / other runtimes
+                │
+                ▼
+        Python public facade: import ubin
+                │
+    ┌───────────┼───────────────────────┐
+    ▼           ▼                       ▼
+Binary core   Capability runtime     Protocol runtime
+    │           │                       │
+    │           ├─ lazy namespaces      ├─ canonical values
+    │           ├─ provider SDK         ├─ 12-byte envelope
+    │           ├─ permissions          └─ conformance vectors
+    │           ├─ diagnostics
+    │           └─ lock/sync
+    │
+    ▼
+Security / transport profiles
+    ├─ authenticated .ubs container
+    ├─ TLS 1.3 client/server
+    ├─ X25519 + HKDF session derivation
+    ├─ durable resume
+    ├─ KRP ciphertext layout
+    └─ authenticated lossless PNG carrier
 ```
+
+## Universal binary core
+
+Filesystem paths, bytes-like buffers, and seekable binary streams expose the same bounded interface. Detection reads only bounded signatures. Streaming and hashing process data incrementally. Whole-file operations are explicit and guarded.
+
+## Capability/runtime layer
+
+The normal developer entry point is `import ubin`. Capability modules are loaded lazily. Provider installation is explicit rather than an implicit side effect of attribute access. Provider manifests declare compatibility and permissions; diagnostics and environment lockfiles make runtime state inspectable and reproducible.
+
+## UBIN Protocol 2
+
+Protocol 2 is intentionally independent of Python object memory layout. It defines canonical values and a fixed envelope in big-endian bytes. Python is the reference implementation; C, C++, and Java conformance code lives under `interop/`. Any other language can implement the same frozen specification without embedding Python.
+
+See [`PROTOCOL_V2.md`](PROTOCOL_V2.md).
 
 ## Local secure container
 
-The legacy/local `.ubs` format stores a public authenticated header, AES-256-GCM frames, and an authenticated final SHA-256 digest. It uses atomic publication: a temporary file is fsynced and renamed only after successful creation.
+The established `.ubs` format stores a public authenticated header, AES-256-GCM frames, and an authenticated final SHA-256 digest. Atomic publication uses a temporary file and rename after successful creation. v2 retains this proven compatibility path.
 
 ## Network
 
-1. TLS 1.3 protects the connection and authenticates the server certificate.
-2. UBIN performs an ephemeral X25519 exchange inside the TLS connection.
-3. HKDF-SHA256 derives an application session key.
-4. Per-transfer AES and KRP keys are separately derived.
+1. TLS 1.3 protects the connection and authenticates the configured server certificate.
+2. UBIN performs an ephemeral X25519 exchange inside TLS.
+3. HKDF-SHA256 derives application session material.
+4. Transfer encryption and KRP keys are separately derived.
 5. Frames are authenticated with AES-256-GCM.
-6. Resume mode checkpoints only authenticated, durably written plaintext.
-7. The final file is published after exact SHA-256 verification.
+6. Resume checkpoints only authenticated, durably written plaintext.
+7. Final output is published after exact SHA-256 verification.
 
 ## KRP
 
-KRP uses a keyed Feistel-derived permutation over complete ciphertext blocks. It does not serialize a permutation table. It adds no payload bytes and is exactly reversible. A short final block is left in place.
-
-KRP is not a cryptographic replacement for AES-GCM or TLS.
+KRP uses a keyed permutation over complete ciphertext blocks and does not serialize a permutation table. It changes ciphertext layout without adding payload bytes and is exactly reversible. It is not encryption and never substitutes for AES-GCM or TLS.
 
 ## PNG carrier
 
-The v1 image carrier uses a standards-compliant non-interlaced, 8-bit RGBA PNG. UBIN uses PNG filter type 0 for every row so pixel bytes are deterministic and exactly recoverable.
+The authenticated image carrier uses standards-compliant, lossless PNG storage. The protected data path is:
 
 ```text
-file
- ↓
-AES-GCM .ubs payload
- ↓
-file-level KRP
- ↓
-UBIN carrier metadata + permuted payload
- ↓
-RGBA pixel bytes
- ↓
-zlib/PNG IDAT chunks
+source → authenticated encrypted payload → KRP → carrier metadata/payload → RGBA PNG → exact restore
 ```
 
-Public carrier metadata contains only what is needed to parse/recover the encrypted payload: version, sizes, filename, random salt/context, and ciphertext-payload hash. It does not contain the passphrase, AES key, or KRP key.
+The carrier does not expose the passphrase, AES key, or KRP key. Re-encoding, resizing, JPEG conversion, screenshots, and other image edits are not supported transformations because they can destroy exact carrier bytes.
 
-A passphrase is processed with scrypt. HKDF then creates independent encryption and permutation keys.
+## Dependency discipline
 
-## Why NumPy is not required
-
-UBIN's work is byte streaming, cryptography, file I/O and protocol framing. Those operations do not require numerical arrays. Avoiding a mandatory NumPy dependency reduces installation size and avoids unnecessary memory conversions.
+NumPy and other heavy ecosystems are not mandatory runtime dependencies for byte processing. Lightweight built-ins stay small; heavy AI/data/cloud/UI ecosystems belong behind provider adapters where appropriate. This keeps installation and import costs predictable.

@@ -1,18 +1,31 @@
+"""UBIN 2 stable language-neutral canonical value and envelope protocol.
+
+The protocol is intentionally independent of Python object internals. Its wire
+representation is specified in ``docs/PROTOCOL_V2.md`` and is shared by the C,
+C++, Java and Python conformance implementations under ``interop/``.
+"""
+
 from __future__ import annotations
 
 import math
 import struct
 from typing import Any
 
+from .version import PROTOCOL_VERSION
+
 MAGIC = b"UBN2"
-PROTOCOL_VERSION = 2
+PROTOCOL_STABILITY = "stable"
+HEADER_SIZE = 12
 MAX_DEPTH = 64
 DEFAULT_MAX_PAYLOAD = 64 * 1024 * 1024
+DEFAULT_MAX_ITEMS = 1_000_000
+MESSAGE_TYPE_VALUE = 1
+MESSAGE_TYPE_BYTES = 2
 _HEADER = struct.Struct(">4sBBHI")
 
 
 class ProtocolDecodeError(ValueError):
-    pass
+    """Raised when untrusted UBIN protocol bytes are invalid or non-canonical."""
 
 
 def _u32(value: int) -> bytes:
@@ -22,6 +35,7 @@ def _u32(value: int) -> bytes:
 
 
 def encode_value(value: Any, *, _depth: int = 0) -> bytes:
+    """Encode a supported logical value into the canonical UBIN 2 representation."""
     if _depth > MAX_DEPTH:
         raise ValueError("UBIN value nesting is too deep")
     if value is None:
@@ -45,9 +59,10 @@ def encode_value(value: Any, *, _depth: int = 0) -> bytes:
         raw = value.encode("utf-8")
         return b"\x21" + _u32(len(raw)) + raw
     if isinstance(value, (list, tuple)):
-        return b"\x30" + _u32(len(value)) + b"".join(
-            encode_value(item, _depth=_depth + 1) for item in value
-        )
+        body = bytearray(b"\x30" + _u32(len(value)))
+        for item in value:
+            body.extend(encode_value(item, _depth=_depth + 1))
+        return bytes(body)
     if isinstance(value, dict):
         if any(not isinstance(key, str) for key in value):
             raise TypeError("UBIN canonical map keys must be strings")
@@ -61,6 +76,8 @@ def encode_value(value: Any, *, _depth: int = 0) -> bytes:
 
 
 class _Reader:
+    __slots__ = ("data", "offset", "max_items", "items")
+
     def __init__(self, data: bytes, *, max_items: int):
         self.data = data
         self.offset = 0
@@ -105,11 +122,15 @@ class _Reader:
                 raise ProtocolDecodeError("invalid UBIN UTF-8 string") from exc
         if tag == 0x30:
             count = struct.unpack(">I", self.take(4))[0]
+            if count > self.max_items - self.items:
+                raise ProtocolDecodeError("UBIN value item limit exceeded")
             return [self.value(depth + 1) for _ in range(count)]
         if tag == 0x31:
             count = struct.unpack(">I", self.take(4))[0]
+            if count > (self.max_items - self.items) // 2:
+                raise ProtocolDecodeError("UBIN value item limit exceeded")
             result = {}
-            previous = None
+            previous: bytes | None = None
             for _ in range(count):
                 key = self.value(depth + 1)
                 if not isinstance(key, str):
@@ -123,16 +144,32 @@ class _Reader:
         raise ProtocolDecodeError(f"unknown UBIN value tag: 0x{tag:02x}")
 
 
-def decode_value(data: bytes | bytearray | memoryview, *, max_items: int = 1_000_000):
-    reader = _Reader(bytes(data), max_items=max_items)
+def decode_value(
+    data: bytes | bytearray | memoryview,
+    *,
+    max_items: int = DEFAULT_MAX_ITEMS,
+    max_bytes: int = DEFAULT_MAX_PAYLOAD,
+):
+    """Decode one canonical UBIN value with bounded resource limits."""
+    if max_items < 1:
+        raise ValueError("max_items must be at least 1")
+    if max_bytes < 0:
+        raise ValueError("max_bytes must be non-negative")
+    raw = bytes(data)
+    if len(raw) > max_bytes:
+        raise ProtocolDecodeError("UBIN value exceeds byte limit")
+    reader = _Reader(raw, max_items=max_items)
     value = reader.value()
     if reader.offset != len(reader.data):
         raise ProtocolDecodeError("trailing bytes after UBIN value")
     return value
 
 
-def encode_envelope(payload: bytes | bytearray | memoryview, *, message_type: int = 1, flags: int = 0) -> bytes:
+def encode_envelope(payload: bytes | bytearray | memoryview, *, message_type: int = MESSAGE_TYPE_VALUE, flags: int = 0) -> bytes:
+    """Frame payload bytes in the fixed 12-byte UBIN 2 envelope."""
     raw = bytes(payload)
+    if len(raw) > 0xFFFFFFFF:
+        raise OverflowError("UBIN envelope payload must fit uint32")
     if not 0 <= message_type <= 255:
         raise ValueError("message_type must fit uint8")
     if not 0 <= flags <= 0xFFFF:
@@ -141,6 +178,9 @@ def encode_envelope(payload: bytes | bytearray | memoryview, *, message_type: in
 
 
 def decode_envelope(data: bytes | bytearray | memoryview, *, max_payload: int = DEFAULT_MAX_PAYLOAD):
+    """Decode and structurally validate one complete UBIN 2 envelope."""
+    if max_payload < 0:
+        raise ValueError("max_payload must be non-negative")
     raw = bytes(data)
     if len(raw) < _HEADER.size:
         raise ProtocolDecodeError("truncated UBIN envelope")
@@ -161,17 +201,39 @@ def decode_envelope(data: bytes | bytearray | memoryview, *, max_payload: int = 
     }
 
 
+def encode_message(value: Any, *, flags: int = 0) -> bytes:
+    """Encode a canonical UBIN value and wrap it as a value message."""
+    return encode_envelope(encode_value(value), message_type=MESSAGE_TYPE_VALUE, flags=flags)
+
+
+def decode_message(
+    data: bytes | bytearray | memoryview,
+    *,
+    max_payload: int = DEFAULT_MAX_PAYLOAD,
+    max_items: int = DEFAULT_MAX_ITEMS,
+):
+    """Decode a UBIN canonical-value message, rejecting other message types."""
+    envelope = decode_envelope(data, max_payload=max_payload)
+    if envelope["message_type"] != MESSAGE_TYPE_VALUE:
+        raise ProtocolDecodeError("UBIN envelope is not a canonical-value message")
+    return decode_value(envelope["payload"], max_items=max_items, max_bytes=max_payload)
+
+
 def conformance_vector() -> dict[str, str]:
     value = {"bytes": b"\x00\x01", "language": "UBIN", "ok": True, "version": 2}
     canonical = encode_value(value)
-    envelope = encode_envelope(b"hello UBIN", message_type=1, flags=0)
+    envelope = encode_envelope(b"hello UBIN", message_type=MESSAGE_TYPE_VALUE, flags=0)
+    message = encode_message(value)
     return {
         "canonical_value_hex": canonical.hex(),
         "envelope_hex": envelope.hex(),
+        "canonical_message_hex": message.hex(),
     }
 
 
 __all__ = [
-    "MAGIC", "PROTOCOL_VERSION", "ProtocolDecodeError", "encode_value", "decode_value",
-    "encode_envelope", "decode_envelope", "conformance_vector",
+    "MAGIC", "PROTOCOL_VERSION", "PROTOCOL_STABILITY", "HEADER_SIZE", "MAX_DEPTH",
+    "DEFAULT_MAX_PAYLOAD", "DEFAULT_MAX_ITEMS", "MESSAGE_TYPE_VALUE", "MESSAGE_TYPE_BYTES",
+    "ProtocolDecodeError", "encode_value", "decode_value", "encode_envelope", "decode_envelope",
+    "encode_message", "decode_message", "conformance_vector",
 ]

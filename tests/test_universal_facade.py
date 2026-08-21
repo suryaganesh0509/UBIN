@@ -10,7 +10,7 @@ import ubin
 
 
 def test_v107_single_import_namespaces_are_discoverable():
-    assert ubin.__version__ == "1.0.7"
+    assert ubin.__version__ == "2.0.0"
     public = dir(ubin)
     for name in ("search", "sort", "ds", "capabilities", "load"):
         assert name in public

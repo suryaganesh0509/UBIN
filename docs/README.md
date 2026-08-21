@@ -1,4 +1,7 @@
-# UBIN Documentation
+# UBIN Documentation — v2.0.0
+- [`V2_0_0_STABLE.md`](V2_0_0_STABLE.md) — recommended stable v2 architecture and release contract
+- [`PROTOCOL_V2.md`](PROTOCOL_V2.md) — frozen polyglot wire specification
+- [`MIGRATION_V2.md`](MIGRATION_V2.md) — upgrade/compatibility guidance from v1
 
 This directory is the detailed documentation for UBIN. The root `README.md` is intentionally short enough to act as the GitHub front door.
 

@@ -92,7 +92,7 @@ The package metadata targets Python 3.10 and newer, with the release CI covering
 
 For normal v1.0.5 user-facing operations, the main high-level API is already available through the top-level package.
 
-The planned v1.0.6 goal is stronger: formalize a single-import public facade so supported public functionality does not require users to import from internal submodules.
+Since v1.0.6, UBIN provides a single-import public facade so supported public functionality does not require users to import from internal submodules. v2.0.0 retains and stabilizes that model.
 
 ## Is `generate_localhost_certificate()` for production?
 

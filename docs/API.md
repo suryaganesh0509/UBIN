@@ -1,6 +1,6 @@
-# UBIN v1.0.6 Public API Reference
+# UBIN v2.0.0 Public Python API Reference
 
-v1.0.6 preserves the established binary/security API and adds lazy universal capability namespaces available from a single `import ubin`.
+UBIN v2.0.0 preserves the established binary/security API, the lazy universal capability facade, and adds the stable `ubin.protocol` polyglot contract.
 
 ## `ubin.open(source, *, name=None)`
 
@@ -248,3 +248,17 @@ queue = ubin.ds.Queue([1, 2, 3])
 ```
 
 See `V1_0_6_UNIVERSAL_FACADE.md` for architecture and release gates.
+
+## UBIN 2 stable protocol API
+
+```python
+ubin.protocol.encode_value(value)
+ubin.protocol.decode_value(data, *, max_items=1_000_000, max_bytes=64*1024*1024)
+ubin.protocol.encode_envelope(payload, *, message_type=1, flags=0)
+ubin.protocol.decode_envelope(data, *, max_payload=64*1024*1024)
+ubin.protocol.encode_message(value, *, flags=0)
+ubin.protocol.decode_message(data, *, max_payload=64*1024*1024, max_items=1_000_000)
+ubin.protocol.conformance_vector()
+```
+
+Protocol 2 accepts null, booleans, signed int64, finite binary64 floats, bytes, UTF-8 strings, lists, and string-keyed maps. Maps are canonicalized by UTF-8 key bytes. The envelope is a language-neutral 12-byte header plus payload. See [`PROTOCOL_V2.md`](PROTOCOL_V2.md) for the frozen wire specification.
