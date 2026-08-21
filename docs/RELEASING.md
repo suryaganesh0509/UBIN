@@ -1,6 +1,6 @@
 # UBIN release process
 
-UBIN v1.0.1 includes GitHub Actions workflows for testing, packaging, security scanning, fuzz-smoke runs, and PyPI Trusted Publishing.
+The UBIN v1 release process uses GitHub Actions for testing, packaging, security scanning, fuzz-smoke runs, artifact validation, and PyPI Trusted Publishing.
 
 ## Release gate
 
@@ -40,6 +40,28 @@ Also create a GitHub environment named `pypi`; protection rules/reviewer approva
 
 Then create the version tag and publish a GitHub Release. The release event builds the wheel/sdist and publishes them through OIDC.
 
+## Candidate-first release flow
+
+Prepare and validate the release locally first.
+
+Push the candidate commit to `main` without creating the version tag.
+
+Require the current candidate commit to pass CI, Package, and Security
+workflows before tagging.
+
+Only after those current-commit workflows are green should the immutable
+version tag be created and pushed.
+
+A GitHub Release may then be created from that exact tag, which triggers the
+PyPI Trusted Publishing workflow.
+
 ## Version integrity
 
-Never move an already published version tag. Fixes after v1.0.1 become v1.0.2 or a later semantic version.
+Never move or overwrite an already published version tag.
+
+If a problem is found after a public tag exists, preserve that tag and create
+a new semantic patch version.
+
+Historical failed workflow runs remain part of repository history; release
+health is determined by the workflow results attached to the final release
+commit and tag.

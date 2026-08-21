@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.4
+
+Release-integrity closure for the stable UBIN v1 line.
+
+- Incorporated the final Windows pytest portability correction by using
+  bounded explicit IDs for large binary parameter cases.
+- Added a permanent collection guard preventing oversized pytest node IDs
+  from reaching platform environment-variable limits.
+- Synchronized package, runtime, CLI, demo, examples, tests, README, and
+  release documentation on v1.0.4.
+- Updated GitHub artifact upload/download actions used by package, security,
+  and release workflows.
+- Strengthened package CI with an uploaded-artifact download and clean-wheel
+  installation round trip.
+- Carries forward the Windows PNG cleanup, guarded `os.fchmod`, and dynamic
+  package-version validation corrections from earlier patch releases.
+- No intentional public API, cryptographic primitive, secure-container,
+  network wire-format, KRP, resume, or PNG-carrier format changes.
+
 ## 1.0.3
 
 Windows CI and release-workflow portability correction.
