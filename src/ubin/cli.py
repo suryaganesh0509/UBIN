@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import stat
+import subprocess
 import sys
 
 import ubin
@@ -56,7 +57,7 @@ def _print_receipt(receipt) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ubin",
-        description="UBIN v1.0.5 — universal binary access and secure transport/carriers",
+        description="UBIN v1.0.6 — universal binary access and secure transport/carriers",
     )
     parser.add_argument("--version", action="version", version=f"UBIN {ubin.__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -92,6 +93,15 @@ def build_parser() -> argparse.ArgumentParser:
     image_restore.add_argument("output", nargs="?")
     image_restore.add_argument("--passphrase-env", help="read passphrase from this environment variable instead of prompting")
     image_restore.add_argument("--overwrite", action="store_true")
+
+    capabilities = sub.add_parser("list", help="list bundled and installed UBIN capabilities")
+    capabilities.add_argument("--json", action="store_true", dest="as_json")
+
+    add = sub.add_parser("add", help="add or verify a UBIN capability provider")
+    add.add_argument("capability")
+    add.add_argument("--package", help="explicit provider package/spec to install with pip")
+    add.add_argument("--upgrade", action="store_true", help="allow pip to upgrade the provider")
+    add.add_argument("--dry-run", action="store_true", help="print the pip action without changing the environment")
 
     demo = sub.add_parser("demo", help="launch the local UBIN browser demonstration")
     demo.add_argument("--port", type=int, default=5055)
@@ -169,6 +179,93 @@ def main(argv=None) -> int:
                 overwrite=args.overwrite,
             )
             _print_receipt(receipt)
+            return 0
+
+        if args.command == "list":
+            rows = ubin.capabilities()
+            if args.as_json:
+                print(json.dumps([
+                    {
+                        "name": item.name,
+                        "kind": item.kind,
+                        "provider": item.provider,
+                        "loaded": item.loaded,
+                        "description": item.description,
+                    }
+                    for item in rows
+                ], indent=2, sort_keys=True))
+            else:
+                print(f"{'CAPABILITY':<16} {'KIND':<10} {'LOADED':<8} PROVIDER")
+                for item in rows:
+                    print(
+                        f"{item.name:<16} {item.kind:<10} "
+                        f"{('yes' if item.loaded else 'no'):<8} {item.provider}"
+                    )
+            return 0
+
+        if args.command == "add":
+            name = args.capability.strip().lower()
+            existing = next(
+                (item for item in ubin.capabilities() if item.name == name),
+                None,
+            )
+            if existing is not None:
+                if existing.kind == "builtin":
+                    print(f"UBIN capability {name!r} is already bundled.")
+                else:
+                    print(
+                        f"UBIN capability {name!r} is already installed "
+                        f"from provider {existing.provider!r}."
+                    )
+                return 0
+
+            if not args.package:
+                print(
+                    f"UBIN capability {name!r} has no installed provider. "
+                    f"Install an explicitly trusted provider with: "
+                    f"ubin add {name} --package PACKAGE",
+                    file=sys.stderr,
+                )
+                return 2
+
+            package = args.package.strip()
+            if not package:
+                print("provider package must not be empty", file=sys.stderr)
+                return 2
+            if package.startswith("-"):
+                print("provider package must not begin with '-'", file=sys.stderr)
+                return 2
+
+            command = [sys.executable, "-m", "pip", "install"]
+            if args.upgrade:
+                command.append("--upgrade")
+            command.append(package)
+
+            if args.dry_run:
+                print("DRY RUN:", " ".join(command))
+                return 0
+
+            print(f"Installing explicit UBIN provider for capability {name!r}: {package}")
+            result = subprocess.run(command, check=False)
+            if result.returncode != 0:
+                return result.returncode
+
+            installed = next(
+                (item for item in ubin.capabilities() if item.name == name),
+                None,
+            )
+            if installed is None:
+                print(
+                    f"Package {package!r} installed, but it did not register "
+                    f"UBIN capability {name!r} in entry-point group 'ubin.capabilities'.",
+                    file=sys.stderr,
+                )
+                return 2
+
+            print(
+                f"UBIN capability {name!r} is ready from provider "
+                f"{installed.provider!r}."
+            )
             return 0
 
         if args.command == "demo":

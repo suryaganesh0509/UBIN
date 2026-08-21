@@ -156,8 +156,8 @@ CSS = """
 """
 
 
-def _page(body: str, title="UBIN v1.0.5 Demo") -> bytes:
-    return f'''<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class="wrap"><div class="brand">UBIN <span class="ver">v1.0.5</span></div>{body}<div class="footer">UBIN handles the bytes. You handle the logic. • Local demo only</div></div></body></html>'''.encode()
+def _page(body: str, title="UBIN v1.0.6 Demo") -> bytes:
+    return f'''<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class="wrap"><div class="brand">UBIN <span class="ver">v1.0.6</span></div>{body}<div class="footer">UBIN handles the bytes. You handle the logic. • Local demo only</div></div></body></html>'''.encode()
 
 
 def _home(message=""):
@@ -316,7 +316,7 @@ class _Handler(BaseHTTPRequestHandler):
 def run_demo(*, port=5055, open_browser=True):
     server = ThreadingHTTPServer(("127.0.0.1", port), _Handler)
     url = f"http://127.0.0.1:{port}"
-    print(f"UBIN v1.0.5 demo: {url}")
+    print(f"UBIN v1.0.6 demo: {url}")
     print("Press Ctrl+C to stop.")
     if open_browser:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()

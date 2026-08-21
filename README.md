@@ -1,10 +1,10 @@
-# UBIN v1.0.5 — Universal Binary
+# UBIN v1.0.6 — Universal Platform Foundation
 
 > **UBIN handles the bytes. You handle the logic.**
 
 UBIN is a Python reference implementation for working with arbitrary binary data through one consistent interface. It provides lazy binary access, bounded-memory streaming, hashing, authenticated local containers, TLS 1.3 transfer, interruption-safe resume, optional KRP ciphertext layout, and a lossless PNG carrier.
 
-**v1.0.5 is a documentation-focused patch release.** It intentionally keeps the v1.0.4 runtime behavior, public API, cryptographic primitives, secure-container format, network protocol, resume format, KRP format, and PNG-carrier format unchanged.
+**v1.0.6 introduces the universal single-import foundation.** Existing binary/security behavior remains available while new capability namespaces are resolved lazily from one normal `import ubin` entry point.
 
 ## Start here
 
@@ -23,7 +23,7 @@ ubin --version
 Expected for this release:
 
 ```text
-UBIN 1.0.5
+UBIN 1.0.6
 ```
 
 Python:
@@ -64,6 +64,9 @@ UBIN does not require a recognized filename extension. Unknown content remains v
 | Run a reference receive server | `ubin.secure_server(...)` |
 | Create a lossless authenticated PNG carrier | `ubin.to_image(...)` |
 | Restore a PNG carrier | `ubin.from_image(...)` |
+| Linear / binary search | `ubin.search.linear(...)`, `ubin.search.binary(...)` |
+| Sort values | `ubin.sort.values(...)`, `ubin.sort.merge(...)`, `ubin.sort.quick(...)` |
+| Core data structures | `ubin.ds.Stack`, `ubin.ds.Queue`, `ubin.ds.BinaryTree`, `ubin.ds.Graph` |
 
 ## Mental model
 
@@ -118,7 +121,7 @@ python3 -m pip install ubin
 ### Exact release
 
 ```bash
-python3 -m pip install ubin==1.0.5
+python3 -m pip install ubin==1.0.6
 ```
 
 ### Repository development
@@ -248,6 +251,8 @@ ubin image-restore input.ubin.png restored.bin --passphrase-env UBIN_PASS
 ## Documentation map
 
 - [`docs/README.md`](docs/README.md) — choose the right documentation path
+- [`docs/UBIN_VISION.md`](docs/UBIN_VISION.md) — long-term universal-platform direction
+- [`docs/V1_0_6_UNIVERSAL_FACADE.md`](docs/V1_0_6_UNIVERSAL_FACADE.md) — v1.0.6 facade/capability architecture
 - [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) — first installation and first successful operations
 - [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — practical usage patterns
 - [`docs/HOW_UBIN_WORKS.md`](docs/HOW_UBIN_WORKS.md) — end-to-end explanation
@@ -294,10 +299,10 @@ See [`docs/COMPLEXITY_AND_PERFORMANCE.md`](docs/COMPLEXITY_AND_PERFORMANCE.md) f
 ```text
 v1.0.4  release-integrity stable baseline
 v1.0.5  documentation & developer-understanding patch
-v1.0.6  planned single-import public facade
+v1.0.6  universal single-import capability foundation
 ```
 
-The planned v1.0.6 goal is that normal developers should need only:
+The v1.0.6 foundation makes the normal developer entry point:
 
 ```python
 import ubin
@@ -308,3 +313,20 @@ and should not need to import user-facing functionality from internal UBIN modul
 ## License
 
 MIT. See [`LICENSE`](LICENSE).
+
+## Capability management
+
+Inspect the universal capability layer without importing heavy providers:
+
+```bash
+ubin list
+ubin list --json
+```
+
+Future provider packages can be added explicitly:
+
+```bash
+ubin add <capability> --package <trusted-provider-package>
+```
+
+Normal application execution never silently installs packages.

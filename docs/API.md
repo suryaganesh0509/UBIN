@@ -1,6 +1,6 @@
-# UBIN v1.0.5 Public API Reference
+# UBIN v1.0.6 Public API Reference
 
-v1.0.5 documents the stable v1.0.4 runtime API. It does not intentionally add runtime behavior.
+v1.0.6 preserves the established binary/security API and adds lazy universal capability namespaces available from a single `import ubin`.
 
 ## `ubin.open(source, *, name=None)`
 
@@ -234,3 +234,17 @@ ubin demo [--port N] [--no-browser]
 ```
 
 Use `ubin --help` and `ubin <command> --help` as the executable source of truth for command options.
+
+## v1.0.6 universal capability namespaces
+
+Normal users import only `ubin`. The first proof namespaces are loaded on first access.
+
+```python
+import ubin
+
+index = ubin.search.binary([1, 3, 5, 7], 5)
+ordered = ubin.sort.values([3, 1, 2])
+queue = ubin.ds.Queue([1, 2, 3])
+```
+
+See `V1_0_6_UNIVERSAL_FACADE.md` for architecture and release gates.

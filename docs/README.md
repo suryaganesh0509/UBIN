@@ -4,6 +4,11 @@ This directory is the detailed documentation for UBIN. The root `README.md` is i
 
 ## Choose your path
 
+- [`CAPABILITIES.md`](CAPABILITIES.md) — capability discovery, providers, and safe installation
+
+- [`UBIN_VISION.md`](UBIN_VISION.md) — long-term universal-platform vision
+- [`V1_0_6_UNIVERSAL_FACADE.md`](V1_0_6_UNIVERSAL_FACADE.md) — v1.0.6 single-import architecture
+
 ### I just want to use UBIN
 
 1. [`GETTING_STARTED.md`](GETTING_STARTED.md)

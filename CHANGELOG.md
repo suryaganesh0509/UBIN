@@ -1,4 +1,16 @@
 # Changelog
+## 1.0.6
+
+- Added safe capability discovery/management CLI (`ubin list`, explicit `ubin add ... --package ...`).
+
+Universal single-import capability foundation.
+- Introduced lazy `ubin.search`, `ubin.sort`, and `ubin.ds` namespaces.
+- Added capability discovery/loading with a future `ubin.capabilities` entry-point provider contract.
+- Deferred the established secure implementation until first security use while preserving top-level v1 calls.
+- Added search, sorting, data-structure, facade, and lazy-import regression tests.
+- Added the long-term UBIN platform vision and v1.0.6 architecture document.
+- No intentional cryptographic primitive, container, network wire-format, resume, KRP, or PNG-carrier format changes.
+
 ## 1.0.5
 
 Documentation and developer-understanding patch.

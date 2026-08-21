@@ -1,15 +1,9 @@
 from __future__ import annotations
 
+from importlib import import_module
+from typing import TYPE_CHECKING
+
 from .core import UbinInfo, UbinMemoryObject, UbinObject, UbinStreamObject
-from .secure import (
-    ImageCarrierReceipt,
-    ImageRestoreReceipt,
-    SecureServer,
-    SecureSource,
-    create_image_carrier,
-    decrypt_file,
-    restore_image_carrier,
-)
 from .errors import (
     UbinAuthenticationError,
     UbinCarrierError,
@@ -33,7 +27,28 @@ from .errors import (
     UbinTLSVerificationError,
 )
 
-__version__ = "1.0.5"
+__version__ = "1.0.6"
+
+# Bundled universal capability namespaces. These modules are intentionally not
+# imported during bare ``import ubin``.
+_BUILTIN_CAPABILITY_MODULES = {
+    "search": ".search",
+    "sort": ".sort",
+    "ds": ".ds",
+}
+
+# Names that existed at the top level in v1.0.5 because ``ubin.secure`` was
+# eagerly imported. Keep them source-compatible while loading security only on
+# first use.
+_SECURE_LAZY_ATTRS = {
+    "SecureSource",
+    "SecureServer",
+    "ImageCarrierReceipt",
+    "ImageRestoreReceipt",
+    "create_image_carrier",
+    "decrypt_file",
+    "restore_image_carrier",
+}
 
 
 def open(source, *, name=None):
@@ -56,57 +71,36 @@ def open(source, *, name=None):
     raise TypeError("UBIN source must be a path, bytes-like buffer, or seekable binary stream")
 
 
-__all__ = [
-    "open",
-    "UbinObject",
-    "UbinMemoryObject",
-    "UbinStreamObject",
-    "UbinInfo",
-    "UbinError",
-    "UbinNotFound",
-    "UbinNotAFile",
-    "UbinPermissionDenied",
-    "UbinClosed",
-    "UbinInvalidRange",
-    "UbinSecureError",
-    "UbinInvalidHeader",
-    "UbinAuthenticationError",
-    "UbinCorruptionError",
-    "UbinOutputExists",
-    "UbinKeyError",
-    "UbinNetworkError",
-    "UbinProtocolError",
-    "UbinHandshakeError",
-    "UbinTLSVerificationError",
-    "UbinResumeError",
-    "UbinResumeTicketError",
-    "UbinSourceChanged",
-    "UbinCarrierError",
-]
+def _load_secure_attr(name: str):
+    module = import_module(".secure", __name__)
+    # v1.0.6 makes the secure package itself callable. Once loaded, Python may
+    # replace the initial lightweight ``secure`` function with that module, but
+    # ``ubin.secure(...)`` remains valid and direct legacy submodule imports also
+    # keep working.
+    value = getattr(module, name)
+    globals()[name] = value
+    return value
 
 
-def secure(source, *, key=None) -> SecureSource:
+def _secure_call(source, *, key=None):
     """
     Create a UBIN Secure source.
 
-    Local v0.2 container:
-        receipt = ubin.secure("file.bin").save("file.ubs")
-        ubin.decrypt("file.ubs", "restored.bin", key=receipt.key)
-
-    Network v0.3:
-        ubin.secure("file.bin").send(...)
-
-    Resumable network v0.4:
-        ubin.secure("file.bin").send(..., resume=True)
-
-    KRP layout v0.5:
-        ubin.secure("file.bin").send(..., resume=True, permutation=True)
+    Security implementation loading is deferred until this call is used.
+    Existing v1 local/network/resume/KRP behavior remains behind the same API.
     """
-    return SecureSource(source, key=key)
+    secure_source = _load_secure_attr("SecureSource")
+    return secure_source(source, key=key)
+
+
+# Public compatibility name before the secure namespace has been loaded. After
+# first security use, the callable ``ubin.secure`` module becomes this attribute.
+secure = _secure_call
 
 
 def decrypt(secure_source, destination, *, key, overwrite=False):
-    """Restore an authenticated UBIN Secure 0.2 container."""
+    """Restore an authenticated UBIN Secure container."""
+    decrypt_file = _load_secure_attr("decrypt_file")
     return decrypt_file(
         secure_source,
         destination,
@@ -127,8 +121,9 @@ def secure_server(
     client_ca=None,
     resume_state_dir=None,
 ):
-    """Create a UBIN Secure server supporting v0.3-v0.5 transfer modes."""
-    return SecureServer(
+    """Create a UBIN Secure server supporting the existing v1 transfer modes."""
+    secure_server_type = _load_secure_attr("SecureServer")
+    return secure_server_type(
         host=host,
         port=port,
         certfile=certfile,
@@ -152,6 +147,7 @@ def to_image(
     overwrite=False,
 ):
     """Create a lossless authenticated UBIN v1 PNG carrier."""
+    create_image_carrier = _load_secure_attr("create_image_carrier")
     return create_image_carrier(
         source,
         destination,
@@ -172,6 +168,7 @@ def from_image(
     overwrite=False,
 ):
     """Restore a file from a lossless authenticated UBIN v1 PNG carrier."""
+    restore_image_carrier = _load_secure_attr("restore_image_carrier")
     return restore_image_carrier(
         carrier,
         destination,
@@ -181,7 +178,110 @@ def from_image(
     )
 
 
-__all__ += [
-    "secure", "decrypt", "secure_server", "to_image", "from_image",
-    "ImageCarrierReceipt", "ImageRestoreReceipt",
+def capabilities(*, include_plugins: bool = True):
+    """Return discoverable UBIN capabilities without loading provider code."""
+    from ._capabilities import list_capabilities
+
+    return list_capabilities(include_plugins=include_plugins)
+
+
+def load(name: str):
+    """Explicitly resolve and cache a built-in or installed UBIN capability."""
+    if name in _BUILTIN_CAPABILITY_MODULES:
+        module = import_module(_BUILTIN_CAPABILITY_MODULES[name], __name__)
+        globals()[name] = module
+        return module
+
+    from ._capabilities import load_capability
+
+    capability = load_capability(name)
+    globals()[name] = capability
+    return capability
+
+
+def __getattr__(name: str):
+    module_name = _BUILTIN_CAPABILITY_MODULES.get(name)
+    if module_name is not None:
+        module = import_module(module_name, __name__)
+        globals()[name] = module
+        return module
+
+    if name in _SECURE_LAZY_ATTRS:
+        return _load_secure_attr(name)
+
+    # Unknown public attributes get one chance to resolve through installed
+    # UBIN capability entry points. Typos still surface as AttributeError.
+    try:
+        from ._capabilities import UbinCapabilityNotFound, load_capability
+
+        capability = load_capability(name)
+    except UbinCapabilityNotFound as exc:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
+
+    globals()[name] = capability
+    return capability
+
+
+def __dir__():
+    names = set(globals()) | set(__all__) | set(_BUILTIN_CAPABILITY_MODULES)
+    try:
+        names.update(item.name for item in capabilities())
+    except Exception:
+        # ``dir(ubin)`` must remain useful even if third-party package metadata
+        # is malformed. Actual capability loading still reports the real error.
+        pass
+    return sorted(names)
+
+
+if TYPE_CHECKING:
+    from . import ds as ds
+    from . import search as search
+    from . import sort as sort
+    from .secure import ImageCarrierReceipt as ImageCarrierReceipt
+    from .secure import ImageRestoreReceipt as ImageRestoreReceipt
+    from .secure import SecureServer as SecureServer
+    from .secure import SecureSource as SecureSource
+
+
+__all__ = [
+    "__version__",
+    "open",
+    "secure",
+    "decrypt",
+    "secure_server",
+    "to_image",
+    "from_image",
+    "capabilities",
+    "load",
+    "search",
+    "sort",
+    "ds",
+    "UbinObject",
+    "UbinMemoryObject",
+    "UbinStreamObject",
+    "UbinInfo",
+    "SecureSource",
+    "SecureServer",
+    "ImageCarrierReceipt",
+    "ImageRestoreReceipt",
+    "UbinError",
+    "UbinNotFound",
+    "UbinNotAFile",
+    "UbinPermissionDenied",
+    "UbinClosed",
+    "UbinInvalidRange",
+    "UbinSecureError",
+    "UbinInvalidHeader",
+    "UbinAuthenticationError",
+    "UbinCorruptionError",
+    "UbinOutputExists",
+    "UbinKeyError",
+    "UbinNetworkError",
+    "UbinProtocolError",
+    "UbinHandshakeError",
+    "UbinTLSVerificationError",
+    "UbinResumeError",
+    "UbinResumeTicketError",
+    "UbinSourceChanged",
+    "UbinCarrierError",
 ]

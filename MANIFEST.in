@@ -16,3 +16,4 @@ include CONTRIBUTING.md
 include CODE_OF_CONDUCT.md
 include codecov.yml
 recursive-include fuzz *.py *.md
+recursive-include benchmarks *.py
