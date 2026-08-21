@@ -1,4 +1,22 @@
 # Changelog
+## 1.0.5
+
+Documentation and developer-understanding patch.
+
+- Reworked the root README as the GitHub `main` landing page.
+- Added a documentation index, getting-started guide, user guide, and end-to-end
+  explanation of UBIN's data flows.
+- Expanded the public API documentation.
+- Added explicit time/space complexity and reproducible performance-benchmark
+  guidance without making machine-independent speed claims.
+- Added testing/release-reproduction, troubleshooting, and FAQ documentation.
+- Clarified exact-restoration semantics: UBIN correctness is byte/hash equality,
+  not a prediction-style accuracy percentage.
+- Updated active installation documentation now that UBIN is publicly available
+  from PyPI.
+- No intentional public API, cryptographic primitive, secure-container,
+  network wire-format, KRP, resume, or PNG-carrier format changes from v1.0.4.
+
 
 ## 1.0.4
 
