@@ -41,6 +41,19 @@ _BUILTINS: dict[str, tuple[str, str]] = {
 }
 
 
+def _load_builtin_module(name: str) -> Any:
+    # Explicit literal allowlist for bundled capabilities.
+    if name == "ds":
+        return import_module("ubin.ds")
+    if name == "search":
+        return import_module("ubin.search")
+    if name == "secure":
+        return import_module("ubin.secure")
+    if name == "sort":
+        return import_module("ubin.sort")
+    raise UbinCapabilityNotFound(f"unknown bundled UBIN capability: {name!r}")
+
+
 def _validate_name(name: str) -> str:
     if not isinstance(name, str):
         raise TypeError("UBIN capability name must be a string")
@@ -130,9 +143,8 @@ def get_capability_info(name: str) -> CapabilityInfo:
 
 def load_capability(name: str) -> Any:
     normalized = _validate_name(name)
-    builtin = _BUILTINS.get(normalized)
-    if builtin is not None:
-        return import_module(builtin[0])
+    if normalized in _BUILTINS:
+        return _load_builtin_module(normalized)
 
     matches = _entry_points_for(normalized)
     if not matches:

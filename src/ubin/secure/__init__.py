@@ -5,6 +5,27 @@ import inspect
 import sys
 from types import ModuleType
 
+def _load_internal_module(module_name: str):
+    # Explicit allowlist for UBIN security implementation modules.
+    if module_name == ".container":
+        return import_module(".container", __name__)
+    if module_name == ".crypto":
+        return import_module(".crypto", __name__)
+    if module_name == ".network":
+        return import_module(".network", __name__)
+    if module_name == ".devcert":
+        return import_module(".devcert", __name__)
+    if module_name == ".resume":
+        return import_module(".resume", __name__)
+    if module_name == ".krp":
+        return import_module(".krp", __name__)
+    if module_name == ".krp_transfer":
+        return import_module(".krp_transfer", __name__)
+    if module_name == ".image_carrier":
+        return import_module(".image_carrier", __name__)
+    raise AttributeError(f"unapproved UBIN security module: {module_name!r}")
+
+
 _LAZY_ATTRS = {
     "DEFAULT_SECURE_FRAME_SIZE": (".container", "DEFAULT_SECURE_FRAME_SIZE"),
     "RestoreReceipt": (".container", "RestoreReceipt"),
@@ -40,7 +61,7 @@ def __getattr__(name: str):
     if target is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     module_name, attr_name = target
-    module = import_module(module_name, __name__)
+    module = _load_internal_module(module_name)
     value = getattr(module, attr_name)
     globals()[name] = value
     return value

@@ -37,6 +37,17 @@ _BUILTIN_CAPABILITY_MODULES = {
     "ds": ".ds",
 }
 
+
+def _load_builtin_capability(name: str):
+    # Only bundled UBIN capabilities may resolve through this path.
+    if name == "search":
+        return import_module(".search", __name__)
+    if name == "sort":
+        return import_module(".sort", __name__)
+    if name == "ds":
+        return import_module(".ds", __name__)
+    raise KeyError(name)
+
 # Names that existed at the top level in v1.0.5 because ``ubin.secure`` was
 # eagerly imported. Keep them source-compatible while loading security only on
 # first use.
@@ -188,7 +199,7 @@ def capabilities(*, include_plugins: bool = True):
 def load(name: str):
     """Explicitly resolve and cache a built-in or installed UBIN capability."""
     if name in _BUILTIN_CAPABILITY_MODULES:
-        module = import_module(_BUILTIN_CAPABILITY_MODULES[name], __name__)
+        module = _load_builtin_capability(name)
         globals()[name] = module
         return module
 
@@ -200,9 +211,8 @@ def load(name: str):
 
 
 def __getattr__(name: str):
-    module_name = _BUILTIN_CAPABILITY_MODULES.get(name)
-    if module_name is not None:
-        module = import_module(module_name, __name__)
+    if name in _BUILTIN_CAPABILITY_MODULES:
+        module = _load_builtin_capability(name)
         globals()[name] = module
         return module
 
