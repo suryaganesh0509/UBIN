@@ -1,4 +1,4 @@
-# UBIN v1.0.6 — Universal Platform Foundation
+# UBIN v1.0.7 — Universal Runtime Candidate
 
 > **UBIN handles the bytes. You handle the logic.**
 
@@ -121,7 +121,7 @@ python3 -m pip install ubin
 ### Exact release
 
 ```bash
-python3 -m pip install ubin==1.0.6
+python3 -m pip install ubin==1.0.7
 ```
 
 ### Repository development

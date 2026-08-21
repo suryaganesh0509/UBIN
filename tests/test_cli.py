@@ -24,7 +24,7 @@ def test_cli_version():
     project = Path(__file__).resolve().parents[1]
     result = _run(project, "--version")
     assert result.returncode == 0
-    assert "UBIN 1.0.6" in result.stdout
+    assert "UBIN 1.0.7" in result.stdout
 
 
 def test_cli_info_and_hash(tmp_path: Path):

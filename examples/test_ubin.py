@@ -1,4 +1,4 @@
-"""Small public smoke example for UBIN v1.0.6."""
+"""Small public smoke example for UBIN v1.0.7."""
 import ubin
 
 

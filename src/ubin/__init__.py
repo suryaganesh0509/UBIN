@@ -27,7 +27,7 @@ from .errors import (
     UbinTLSVerificationError,
 )
 
-__version__ = "1.0.6"
+__version__ = "1.0.7"
 
 # Bundled universal capability namespaces. These modules are intentionally not
 # imported during bare ``import ubin``.
@@ -35,17 +35,95 @@ _BUILTIN_CAPABILITY_MODULES = {
     "search": ".search",
     "sort": ".sort",
     "ds": ".ds",
+    "ai": ".ai",
+    "catalog": ".catalog",
+    "cloud": ".cloud",
+    "compress": ".compress",
+    "csv": ".csv",
+    "data": ".data",
+    "db": ".db",
+    "environment": ".environment",
+    "hash": ".hash",
+    "json": ".json",
+    "math": ".math",
+    "net": ".net",
+    "path": ".path",
+    "permissions": ".permissions",
+    "plot": ".plot",
+    "process": ".process",
+    "providers": ".providers",
+    "protocol": ".protocol",
+    "run": ".run",
+    "runtime": ".runtime",
+    "sdk": ".sdk",
+    "stats": ".stats",
+    "system": ".system",
+    "text": ".text",
+    "ui": ".ui",
+    "web": ".web",
 }
 
 
 def _load_builtin_capability(name: str):
-    # Only bundled UBIN capabilities may resolve through this path.
+    # Explicit literal allowlist; kept SAST-verifiable.
     if name == "search":
         return import_module(".search", __name__)
     if name == "sort":
         return import_module(".sort", __name__)
     if name == "ds":
         return import_module(".ds", __name__)
+    if name == "ai":
+        return import_module(".ai", __name__)
+    if name == "catalog":
+        return import_module(".catalog", __name__)
+    if name == "cloud":
+        return import_module(".cloud", __name__)
+    if name == "compress":
+        return import_module(".compress", __name__)
+    if name == "csv":
+        return import_module(".csv", __name__)
+    if name == "data":
+        return import_module(".data", __name__)
+    if name == "db":
+        return import_module(".db", __name__)
+    if name == "environment":
+        return import_module(".environment", __name__)
+    if name == "hash":
+        return import_module(".hash", __name__)
+    if name == "json":
+        return import_module(".json", __name__)
+    if name == "math":
+        return import_module(".math", __name__)
+    if name == "net":
+        return import_module(".net", __name__)
+    if name == "path":
+        return import_module(".path", __name__)
+    if name == "permissions":
+        return import_module(".permissions", __name__)
+    if name == "plot":
+        return import_module(".plot", __name__)
+    if name == "process":
+        return import_module(".process", __name__)
+    if name == "providers":
+        return import_module(".providers", __name__)
+    if name == "protocol":
+        return import_module(".protocol", __name__)
+    if name == "run":
+        return import_module(".run", __name__)
+    if name == "runtime":
+        return import_module(".runtime", __name__)
+    if name == "sdk":
+        return import_module(".sdk", __name__)
+    if name == "stats":
+        return import_module(".stats", __name__)
+    if name == "system":
+        return import_module(".system", __name__)
+    if name == "text":
+        return import_module(".text", __name__)
+    if name == "ui":
+        return import_module(".ui", __name__)
+    if name == "web":
+        return import_module(".web", __name__)
     raise KeyError(name)
 
 # Names that existed at the top level in v1.0.5 because ``ubin.secure`` was
@@ -189,6 +267,46 @@ def from_image(
     )
 
 
+def resource(source, *, name=None):
+    """Open a universal UBIN resource facade without changing the stable v1 open API."""
+    from ._resource import open_resource
+
+    return open_resource(source, name=name)
+
+
+def pipeline(source, *, block_size=1024 * 1024):
+    """Create a bounded-memory byte pipeline."""
+    from ._pipeline import pipeline as make_pipeline
+
+    return make_pipeline(source, block_size=block_size)
+
+
+def flow():
+    """Create a UBIN workflow DAG."""
+    from ._workflow import flow as make_flow
+
+    return make_flow()
+
+
+def doctor(*, deep=False):
+    """Return a UBIN runtime diagnostic report."""
+    from .diagnostics import doctor as run_doctor
+
+    return run_doctor(deep=deep)
+
+
+def capability_info(name: str):
+    from ._capabilities import get_capability_info
+
+    return get_capability_info(name)
+
+
+def verify_capability(name: str, *, load_provider=False):
+    from .runtime import runtime as _runtime
+
+    return _runtime.verify(name, load_provider=load_provider)
+
+
 def capabilities(*, include_plugins: bool = True):
     """Return discoverable UBIN capabilities without loading provider code."""
     from ._capabilities import list_capabilities
@@ -263,9 +381,41 @@ __all__ = [
     "from_image",
     "capabilities",
     "load",
+    "resource",
+    "pipeline",
+    "flow",
+    "doctor",
+    "capability_info",
+    "verify_capability",
     "search",
     "sort",
     "ds",
+    "ai",
+    "catalog",
+    "cloud",
+    "compress",
+    "csv",
+    "data",
+    "db",
+    "environment",
+    "hash",
+    "json",
+    "math",
+    "net",
+    "path",
+    "permissions",
+    "plot",
+    "process",
+    "protocol",
+    "providers",
+    "run",
+    "runtime",
+    "sdk",
+    "stats",
+    "system",
+    "text",
+    "ui",
+    "web",
     "UbinObject",
     "UbinMemoryObject",
     "UbinStreamObject",

@@ -57,7 +57,7 @@ def _print_receipt(receipt) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ubin",
-        description="UBIN v1.0.6 — universal binary access and secure transport/carriers",
+        description="UBIN v1.0.7 — universal runtime candidate",
     )
     parser.add_argument("--version", action="version", version=f"UBIN {ubin.__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -96,6 +96,26 @@ def build_parser() -> argparse.ArgumentParser:
 
     capabilities = sub.add_parser("list", help="list bundled and installed UBIN capabilities")
     capabilities.add_argument("--json", action="store_true", dest="as_json")
+    capabilities.add_argument("--verbose", action="store_true")
+    cap_info = sub.add_parser("capability-info", help="describe one UBIN capability")
+    cap_info.add_argument("capability")
+    verify = sub.add_parser("verify-capability", help="verify capability discovery or provider manifest")
+    verify.add_argument("capability")
+    verify.add_argument("--load-provider", action="store_true")
+    permissions = sub.add_parser("permissions", help="show declared maximum permissions for a capability")
+    permissions.add_argument("capability")
+    doctor = sub.add_parser("doctor", help="diagnose the UBIN runtime")
+    doctor.add_argument("--deep", action="store_true")
+    doctor.add_argument("--json", action="store_true", dest="as_json")
+    init = sub.add_parser("init", help="create ubin.toml for a reproducible UBIN project")
+    init.add_argument("--path", default="ubin.toml")
+    init.add_argument("--overwrite", action="store_true")
+    lock = sub.add_parser("lock", help="create ubin.lock from ubin.toml")
+    lock.add_argument("--config", default="ubin.toml")
+    lock.add_argument("--output", default="ubin.lock")
+    sync = sub.add_parser("sync", help="verify the current environment against ubin.lock")
+    sync.add_argument("--lock", default="ubin.lock")
+    sub.add_parser("protocol-vector", help="print UBIN v2-draft conformance vectors")
 
     add = sub.add_parser("add", help="add or verify a UBIN capability provider")
     add.add_argument("capability")
@@ -201,8 +221,60 @@ def main(argv=None) -> int:
                         f"{item.name:<16} {item.kind:<10} "
                         f"{('yes' if item.loaded else 'no'):<8} {item.provider}"
                     )
+                    if args.verbose:
+                        print(f"  {item.description}")
             return 0
 
+        if args.command == "capability-info":
+            item = ubin.capability_info(args.capability)
+            print(json.dumps({
+                "name": item.name,
+                "kind": item.kind,
+                "provider": item.provider,
+                "loaded": item.loaded,
+                "description": item.description,
+            }, indent=2, sort_keys=True))
+            return 0
+        if args.command == "verify-capability":
+            result = ubin.verify_capability(args.capability, load_provider=args.load_provider)
+            print(json.dumps({
+                "name": result.name,
+                "ok": result.ok,
+                "kind": result.kind,
+                "provider": result.provider,
+                "message": result.message,
+            }, indent=2, sort_keys=True))
+            return 0 if result.ok else 2
+        if args.command == "permissions":
+            permissions = ubin.permissions.for_capability(args.capability)
+            print(json.dumps({
+                "capability": args.capability.strip().lower(),
+                "granted": list(permissions.granted()),
+            }, indent=2, sort_keys=True))
+            return 0
+        if args.command == "doctor":
+            report = ubin.doctor(deep=args.deep)
+            if args.as_json:
+                print(json.dumps(report.as_dict(), indent=2, sort_keys=True))
+            else:
+                print(f"UBIN {report.ubin_version} | Python {report.python_version}")
+                for check in report.checks:
+                    print(f"{'PASS' if check.ok else 'FAIL':<4} {check.name}: {check.detail}")
+                print("HEALTHY" if report.healthy else "UNHEALTHY")
+            return 0 if report.healthy else 2
+        if args.command == "init":
+            print(ubin.environment.init(args.path, overwrite=args.overwrite))
+            return 0
+        if args.command == "lock":
+            print(ubin.environment.lock(args.config, args.output))
+            return 0
+        if args.command == "sync":
+            result = ubin.environment.sync(args.lock)
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 0 if result["ok"] else 2
+        if args.command == "protocol-vector":
+            print(json.dumps(ubin.protocol.conformance_vector(), indent=2, sort_keys=True))
+            return 0
         if args.command == "add":
             name = args.capability.strip().lower()
             existing = next(

@@ -1,3 +1,10 @@
+## v1.0.7 — Universal Runtime Candidate
+
+- Capability runtime, SDK, diagnostics, permissions, environment lockfiles, resources, pipelines and workflows.
+- Expanded lightweight capability namespaces while keeping heavy ecosystems provider-oriented.
+- UBIN 2 language-neutral canonical-value and envelope draft with Python/C/C++/Java conformance preview.
+- Existing v1 binary/security/wire behavior remains the compatibility baseline.
+
 # Changelog
 ## 1.0.6
 

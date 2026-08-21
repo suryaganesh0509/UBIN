@@ -9,8 +9,8 @@ import pytest
 import ubin
 
 
-def test_v106_single_import_namespaces_are_discoverable():
-    assert ubin.__version__ == "1.0.6"
+def test_v107_single_import_namespaces_are_discoverable():
+    assert ubin.__version__ == "1.0.7"
     public = dir(ubin)
     for name in ("search", "sort", "ds", "capabilities", "load"):
         assert name in public
@@ -108,7 +108,7 @@ def test_stack_queue_tree_graph_from_single_import():
 
 def test_capability_registry_lists_builtins():
     info = {item.name: item for item in ubin.capabilities(include_plugins=False)}
-    assert set(info) == {"search", "sort", "ds", "secure"}
+    assert {"search", "sort", "ds", "secure"} <= set(info)
     assert all(item.kind == "builtin" for item in info.values())
 
 
